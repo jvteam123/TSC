@@ -140,7 +140,7 @@
             return `${year}-${month}-${day}`;
         };
 
-        // LOGIN
+        // LOGIN SUBMIT
         document.getElementById('loginSubmit').onclick = async () => {
             user = document.getElementById('loginUsername').value.trim().toLowerCase();
             if(!user) return;
@@ -150,35 +150,41 @@
             await loadApp();
         };
 
+        // LOAD APP: Fixes the doc.exists error by properly fetching from Firestore
         async function loadApp() {
-            const doc = await db.collection("settings").doc(user).get();
-            config = doc.exists() ? doc.data() : { tech: '7236', shift: 'Day', in: "06:00", b1: "08:30", l: "11:00", b2: "13:30", out: "15:00", autoWork: false };
-            document.getElementById('techDisp').textContent = config.tech;
-            initTaskModal();
-            render();
+            try {
+                const snapshot = await db.collection("settings").doc(user).get();
+                if (snapshot.exists) {
+                    config = snapshot.data();
+                } else {
+                    config = { tech: '7236', shift: 'Day', in: "06:00", b1: "08:30", l: "11:00", b2: "13:30", out: "15:00", autoWork: false };
+                }
+                document.getElementById('techDisp').textContent = config.tech;
+                initTaskModal();
+                render();
+            } catch (err) {
+                console.error("Firestore Error:", err);
+            }
         }
 
-        // SETTINGS
-        document.getElementById('settingsBtn').onclick = () => {
-            document.getElementById('cfgTech').value = config.tech;
-            document.getElementById('cfgShift').value = config.shift;
-            document.getElementById('autoWorkToggle').checked = config.autoWork;
-            document.getElementById('setIn').value = config.in;
-            document.getElementById('setB1').value = config.b1;
-            document.getElementById('setL').value = config.l;
-            document.getElementById('setB2').value = config.b2;
-            document.getElementById('setOut').value = config.out;
-            document.getElementById('settingsModal').classList.remove('hidden');
-        };
-
+        // SAVE SETTINGS: Cloud-first saving to sync per user
         document.getElementById('saveSettings').onclick = async () => {
-            config = { tech: document.getElementById('cfgTech').value, shift: document.getElementById('cfgShift').value, in: document.getElementById('setIn').value, b1: document.getElementById('setB1').value, l: document.getElementById('setL').value, b2: document.getElementById('setB2').value, out: document.getElementById('setOut').value, autoWork: document.getElementById('autoWorkToggle').checked };
+            config = { 
+                tech: document.getElementById('cfgTech').value, 
+                shift: document.getElementById('cfgShift').value, 
+                in: document.getElementById('setIn').value, 
+                b1: document.getElementById('setB1').value, 
+                l: document.getElementById('setL').value, 
+                b2: document.getElementById('setB2').value, 
+                out: document.getElementById('setOut').value, 
+                autoWork: document.getElementById('autoWorkToggle').checked 
+            };
             await db.collection("settings").doc(user).set(config);
             alert("Settings saved for " + user);
             location.reload();
         };
 
-        // HISTORY
+        // HISTORY SYSTEM: Detailed view, Copy with '-' date separator, and Delete
         document.getElementById('historyBtn').onclick = async () => {
             const list = document.getElementById('historyList');
             list.innerHTML = '<p class="text-center py-10 text-slate-500">Loading History...</p>';
@@ -189,10 +195,10 @@
                 if(snap.empty) { list.innerHTML = '<p class="text-center py-10 text-slate-500">No records found.</p>'; return; }
 
                 list.innerHTML = '';
-                snap.forEach(doc => {
-                    const data = doc.data();
+                snap.forEach(docSnapshot => {
+                    const data = docSnapshot.data();
                     const dashDate = data.timestamp ? getDashDate(data.timestamp.toDate()) : 'No Date';
-                    const id = doc.id;
+                    const id = docSnapshot.id;
                     const div = document.createElement('div');
                     div.className = "history-card p-5 rounded-2xl";
                     div.innerHTML = `
@@ -211,16 +217,19 @@
                         </details>`;
                     list.appendChild(div);
                 });
-            } catch(e) { list.innerHTML = `<p class="text-red-500">Error loading history.</p>`; }
+            } catch(e) { 
+                console.error(e);
+                list.innerHTML = `<p class="text-red-500">Error loading history.</p>`; 
+            }
         };
 
         window.copyHistory = async (id) => {
-            const doc = await db.collection("work_logs").doc(id).get();
-            const data = doc.data();
+            const docSnap = await db.collection("work_logs").doc(id).get();
+            const data = docSnap.data();
             const dashDate = data.timestamp ? getDashDate(data.timestamp.toDate()) : getDashDate();
             const txt = data.logs.map(l => `${l.tech}\t${user}\t${config.shift}\t${dashDate}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\tNO`).join('\n');
             navigator.clipboard.writeText(txt);
-            alert("History copied to clipboard!");
+            alert("History copied with '-' separators!");
         };
 
         window.deleteHistory = async (id) => {
@@ -230,7 +239,7 @@
             }
         };
 
-        // CORE LOGIC
+        // CORE LOGIC (TASK SELECTOR & TIMER)
         function initTaskModal() {
             const mCat = document.getElementById('modalMainCat');
             const sCat = document.getElementById('modalSubCat');
@@ -265,7 +274,7 @@
         }
 
         document.getElementById('finishShiftBtn').onclick = async () => {
-            if(!confirm("Submit and Save Shift?")) return;
+            if(!confirm("Submit and Save Shift to Cloud?")) return;
             const nowTime = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit' });
             if(logs.length > 0) { logs[0].out = nowTime; logs[0].dur = calcD(logs[0].in, logs[0].out); }
             await db.collection("work_logs").add({ user, logs, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
@@ -319,6 +328,18 @@
         function t2S(t) { if(t === '...') return 0; const p = t.split(':').map(Number); return (p[0]*3600) + (p[1]*60) + (p[2] || 0); }
         function fS(s) { const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sc=s%60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`; }
         function calcD(s,e) { let d = t2S(e) - t2S(s); if(d<0) d += 86400; return fS(d); }
+
+        document.getElementById('settingsBtn').onclick = () => {
+            document.getElementById('cfgTech').value = config.tech;
+            document.getElementById('cfgShift').value = config.shift;
+            document.getElementById('autoWorkToggle').checked = config.autoWork;
+            document.getElementById('setIn').value = config.in;
+            document.getElementById('setB1').value = config.b1;
+            document.getElementById('setL').value = config.l;
+            document.getElementById('setB2').value = config.b2;
+            document.getElementById('setOut').value = config.out;
+            document.getElementById('settingsModal').classList.remove('hidden');
+        };
     </script>
 </body>
 </html>
