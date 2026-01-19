@@ -122,23 +122,83 @@
         const categoryData = { "SARANAC": ["CF"], "ACCUPLUS": ["DEM", "I3", "PCS", "REFIX", "i3QA", "RQA"], "DOWNTIME": ["NoProject"], "TRAINING": ["Formal - Accuplus"] };
         let user = '', logs = [], config = {}, state = "IDLE", timerInterval;
 
-        document.getElementById('loginSubmit').onclick = () => {
-            user = document.getElementById('loginUsername').value.trim().toLowerCase();
-            if(!user) return;
+        // LOGIN SUBMIT: Starts initialization
+        document.getElementById('loginSubmit').onclick = async () => {
+            const inputUser = document.getElementById('loginUsername').value.trim().toLowerCase();
+            if(!inputUser) return;
+            user = inputUser;
             document.getElementById('userDisp').textContent = user;
             document.getElementById('loginModal').classList.add('hidden');
             document.getElementById('mainApp').classList.remove('hidden');
-            loadApp();
+            await loadApp();
         };
 
-        function loadApp() {
-            const saved = localStorage.getItem(`cfg_${user}`);
-            config = saved ? JSON.parse(saved) : { tech: '7236', shift: 'Day', in: "06:00", b1: "08:30", l: "11:00", b2: "13:30", out: "15:00", autoWork: false };
-            document.getElementById('techDisp').textContent = config.tech;
-            initTaskModal();
-            if(config.autoWork) runSmartAuto();
-            else render();
+        // LOAD APP: Fetches settings from Firestore specifically for the user
+        async function loadApp() {
+            try {
+                const settingsDoc = await db.collection("settings").doc(user).get();
+                if (settingsDoc.exists()) {
+                    config = settingsDoc.data();
+                } else {
+                    // Default fallback
+                    config = { tech: '7236', shift: 'Day', in: "06:00", b1: "08:30", l: "11:00", b2: "13:30", out: "15:00", autoWork: false };
+                }
+                document.getElementById('techDisp').textContent = config.tech;
+                initTaskModal();
+                if(config.autoWork) runSmartAuto();
+                else render();
+            } catch (err) {
+                console.error("Load Settings Error:", err);
+            }
         }
+
+        // SAVE SETTINGS: Writes to Firestore using user ID
+        document.getElementById('saveSettings').onclick = async () => {
+            config = { 
+                tech: document.getElementById('cfgTech').value, 
+                shift: document.getElementById('cfgShift').value, 
+                in: document.getElementById('setIn').value, 
+                b1: document.getElementById('setB1').value, 
+                l: document.getElementById('setL').value, 
+                b2: document.getElementById('setB2').value, 
+                out: document.getElementById('setOut').value, 
+                autoWork: document.getElementById('autoWorkToggle').checked 
+            };
+            
+            try {
+                await db.collection("settings").doc(user).set(config);
+                alert("Settings Saved to Cloud!");
+                location.reload();
+            } catch (err) {
+                console.error("Save Error:", err);
+                alert("Error saving settings.");
+            }
+        };
+
+        // HISTORY BUTTON: Fetches historical logs
+        document.getElementById('historyBtn').onclick = async () => {
+            try {
+                const snapshot = await db.collection("work_logs")
+                    .where("user", "==", user)
+                    .orderBy("timestamp", "desc")
+                    .limit(5)
+                    .get();
+
+                if (snapshot.empty) {
+                    alert("No history found for " + user);
+                } else {
+                    let history = "LAST 5 SESSIONS:\n";
+                    snapshot.forEach(doc => {
+                        const d = doc.data();
+                        history += `📅 ${d.timestamp?.toDate().toLocaleDateString() || 'N/A'}\n`;
+                    });
+                    alert(history);
+                }
+            } catch (err) {
+                console.error("History Access Error:", err);
+                alert("History currently unavailable. Ensure Firestore indexes are created.");
+            }
+        };
 
         function initTaskModal() {
             const mCat = document.getElementById('modalMainCat');
@@ -148,30 +208,16 @@
             mCat.onchange();
         }
 
-        // SMART AUTO-WORK LOGIC
         function runSmartAuto() {
             const now = new Date();
             const nowStr = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
-            
-            // 1. Initial Start at "Time In"
             startNewSegment("WORKING", "DOWNTIME", "NoProject", config.in);
-            
-            // 2. Check for passed break times and auto-inject them
-            const schedule = [
-                { time: config.b1, type: "BREAK", name: "BREAK", dur: 15 },
-                { time: config.l, type: "BREAK", name: "BREAK", dur: 60 },
-                { time: config.b2, type: "BREAK", name: "BREAK", dur: 15 }
-            ];
-
+            const schedule = [{ time: config.b1, type: "BREAK", name: "BREAK", dur: 15 }, { time: config.l, type: "BREAK", name: "BREAK", dur: 60 }, { time: config.b2, type: "BREAK", name: "BREAK", dur: 15 }];
             schedule.forEach(s => {
                 if (nowStr > s.time) {
-                    // Inject the break
                     startNewSegment("BREAK", "BREAK", "BREAK", s.time);
-                    // Resume work after the break
                     const resumeTime = addM(s.time, s.dur);
-                    if (nowStr > resumeTime) {
-                        startNewSegment("WORKING", "DOWNTIME", "NoProject", resumeTime);
-                    }
+                    if (nowStr > resumeTime) startNewSegment("WORKING", "DOWNTIME", "NoProject", resumeTime);
                 }
             });
             render();
@@ -192,24 +238,13 @@
         function startNewSegment(newState, main, sub, customStartTime = null) {
             const now = new Date();
             let startTimeStr = customStartTime || now.toLocaleTimeString([], { hour12: false });
-            
             if (logs.length > 0) {
                 const prev = logs[0];
                 prev.out = startTimeStr;
                 prev.dur = calcD(prev.in, prev.out);
             }
-
             state = newState;
-            logs.unshift({
-                tech: config.tech,
-                in: startTimeStr,
-                out: "...",
-                dur: "00:00:00",
-                main: main,
-                sub: sub,
-                rawStart: customStartTime ? null : now
-            });
-            
+            logs.unshift({ tech: config.tech, in: startTimeStr, out: "...", dur: "00:00:00", main: main, sub: sub, rawStart: customStartTime ? null : now });
             updateUI();
             if(!customStartTime) startTimer();
             render();
@@ -230,7 +265,7 @@
                         <td class="px-6 py-4 font-black">${l.dur}</td>
                         <td class="px-6 py-4 text-xs font-black text-blue-500">${l.main}</td>
                         <td class="px-6 py-4 text-xs text-slate-400 font-bold uppercase">${l.sub}</td>
-                        <td class="px-6 py-4 text-center"><button onclick="removeLog(${i})" class="text-red-500">✖</button></td>
+                        <td class="px-6 py-4 text-center"><button onclick="logs.splice(${i},1);render();" class="text-red-500">✖</button></td>
                     </tr>`).join('');
             }
             updateTotal();
@@ -273,10 +308,11 @@
         function calcD(s,e) { let d = t2S(e) - t2S(s); if(d<0) d += 86400; return fS(d); }
         function addM(t, m) { const [h, mi] = t.split(':').map(Number); const d = new Date(0,0,0,h,mi+m); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
 
-        async function saveCloud() { if(logs.length > 0) await db.collection("work_logs").doc(`${user}_active`).set({ user, logs, timestamp: firebase.firestore.FieldValue.serverTimestamp() }); }
+        async function saveCloud() { if(logs.length > 0) await db.collection("work_logs").add({ user, logs, timestamp: firebase.firestore.FieldValue.serverTimestamp() }); }
 
         document.getElementById('settingsBtn').onclick = () => {
             document.getElementById('cfgTech').value = config.tech;
+            document.getElementById('cfgShift').value = config.shift;
             document.getElementById('autoWorkToggle').checked = config.autoWork;
             document.getElementById('setIn').value = config.in;
             document.getElementById('setB1').value = config.b1;
@@ -284,12 +320,6 @@
             document.getElementById('setB2').value = config.b2;
             document.getElementById('setOut').value = config.out;
             document.getElementById('settingsModal').classList.remove('hidden');
-        };
-
-        document.getElementById('saveSettings').onclick = () => {
-            config = { tech: document.getElementById('cfgTech').value, shift: document.getElementById('cfgShift').value, in: document.getElementById('setIn').value, b1: document.getElementById('setB1').value, l: document.getElementById('setL').value, b2: document.getElementById('setB2').value, out: document.getElementById('setOut').value, autoWork: document.getElementById('autoWorkToggle').checked };
-            localStorage.setItem(`cfg_${user}`, JSON.stringify(config));
-            location.reload();
         };
 
         document.getElementById('copyBtn').onclick = () => {
