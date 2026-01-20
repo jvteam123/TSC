@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Logger | v2.5 Random Seconds</title>
+    <title>Pro Logger | v2.6 Stable</title>
     <script src="https://cdn.tailwindcss.com/3.4.3"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -133,20 +133,23 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        const categoryData = { "SARANAC": ["CF"], "ACCUPLUS": ["DEM", "I3", "PCS", "REFIX", "i3QA", "RQA"], "DOWNTIME": ["NoProject"], "TRAINING": ["Formal - Accuplus"] };
+        const categoryData = { "SARANAC": ["CF"], "ACCUPLUS": ["DEM", "I3", "PCS", "REFIX", "i3QA", "RQA"], "DOWNTIME": ["NoProject"], "TRAINER": ["Formal - Accuplus"] };
         let user = '', logs = [], config = {}, state = "IDLE", timerInterval, monitorInterval, shiftFinished = false;
 
-        // --- UTILITIES (RESTORING FULL SECONDS LOGIC) ---
+        // --- UTILITIES ---
         const t2S = (t) => { 
-            if(!t || t === '...') return 0; 
+            if(!t || t === '...' || typeof t !== 'string') return 0; 
             const p = t.split(':').map(Number); 
-            return (p[0]*3600) + (p[1]*60) + (p[2] || 0); 
+            // Fix: Handle both HH:MM and HH:MM:SS
+            if (p.length === 2) return (p[0] * 3600) + (p[1] * 60);
+            return (p[0] * 3600) + (p[1] * 60) + (p[2] || 0); 
         };
 
         const fS = (s, randomize = false) => { 
+            if (isNaN(s) || s < 0) s = 0;
             const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
             let sc = s % 60;
-            if (randomize && sc === 0) sc = Math.floor(Math.random() * 50) + 5; // Random 05 to 55
+            if (randomize && sc === 0) sc = Math.floor(Math.random() * 50) + 5; 
             return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`; 
         };
 
@@ -158,31 +161,32 @@
 
         const addRandomSeconds = (timeStr) => {
             if (!timeStr) return "00:00:00";
-            if (timeStr.split(':').length === 3) return timeStr;
+            const parts = timeStr.split(':');
+            if (parts.length === 3) return timeStr;
             const r = String(Math.floor(Math.random() * 50) + 5).padStart(2, '0');
             return `${timeStr}:${r}`;
         };
 
         const getDashDate = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-        // --- SMART WAND ACTION (RANDOMIZED) ---
+        // --- UPDATED ROW FIX (Index 0 is newest) ---
         window.rowFix = (i) => {
             const log = logs[i];
-            
             if (log.main === "BREAK") {
-                // Determine which break index this is
-                const breakIndex = logs.filter((l, idx) => l.main === "BREAK" && idx >= i).length;
-                if (breakIndex === 1) log.in = addRandomSeconds(config.b1);
-                else if (breakIndex === 2) log.in = addRandomSeconds(config.l);
-                else if (breakIndex === 3) log.in = addRandomSeconds(config.b2);
+                const breakSegments = logs.filter(l => l.main === "BREAK").reverse();
+                const bIdx = breakSegments.indexOf(log) + 1;
+                if (bIdx === 1) log.in = addRandomSeconds(config.b1);
+                else if (bIdx === 2) log.in = addRandomSeconds(config.l);
+                else if (bIdx === 3) log.in = addRandomSeconds(config.b2);
             } else {
+                // If it's the oldest task (at the end of the array)
                 if (i === logs.length - 1) {
-                    log.in = addRandomSeconds(config.in); // Start of day
+                    log.in = addRandomSeconds(config.in);
                 } else {
-                    log.in = logs[i + 1].out; // Snap to task before it
+                    // Start of this task = Out of the task chronological before it (index i+1)
+                    log.in = logs[i + 1].out;
                 }
             }
-            
             if (log.out !== "...") log.dur = calcD(log.in, log.out);
             render(); saveSession();
         };
@@ -206,7 +210,7 @@
                         <td class="px-6 py-4 text-xs text-slate-400 font-bold">${l.sub}</td>
                         <td class="px-6 py-4 text-center flex justify-center gap-2">
                             <button onclick="rowFix(${i})" class="text-amber-500 hover:scale-125 transition-all" title="Auto-Sync">🪄</button>
-                            <button onclick="logs.splice(${i},1); saveSession(); render();" class="text-red-500 opacity-50 hover:opacity-100 transition-all">✖</button>
+                            <button onclick="if(confirm('Delete?')){logs.splice(${i},1); saveSession(); render();}" class="text-red-500 opacity-50 hover:opacity-100 transition-all">✖</button>
                         </td>
                     </tr>`).join('');
             }
@@ -220,16 +224,15 @@
             document.getElementById('loginModal').classList.add('hidden');
             document.getElementById('mainApp').classList.remove('hidden');
             const snap = await db.collection("settings").doc(user).get();
-            config = snap.exists ? snap.data() : { tech: '7236', shift: 'Day', in: "06:00", b1: "08:30", l: "11:00", b2: "13:30", out: "15:00", autoWork: true };
+            config = snap.exists ? snap.data() : { tech: '0000', shift: 'Day', in: "06:00", b1: "08:30", l: "11:00", b2: "13:30", out: "15:00", autoWork: true };
             document.getElementById('techDisp').textContent = config.tech;
             initTaskModal(); loadSession();
             if (monitorInterval) clearInterval(monitorInterval);
-            monitorInterval = setInterval(checkAutoTimeTrigger, 20000);
+            monitorInterval = setInterval(checkAutoTimeTrigger, 30000);
         };
 
         function startNewSegment(newState, main, sub) {
             const now = new Date();
-            // Start time with random seconds
             const timeStr = fS((now.getHours() * 3600) + (now.getMinutes() * 60), true);
             
             if (logs.length > 0 && logs[0].out === "...") { 
@@ -245,12 +248,13 @@
 
         document.getElementById('globalFixBtn').onclick = () => {
             if(logs.length === 0) return;
+            // Oldest entry (last in array) start time
             logs[logs.length-1].in = addRandomSeconds(config.in);
             for (let i = logs.length-2; i >= 0; i--) {
                 logs[i].in = logs[i+1].out;
                 if(logs[i].out !== "...") logs[i].dur = calcD(logs[i].in, logs[i].out);
             }
-            // 07:30 Logic
+            // 07:30 Total Logic
             let cur = 0; logs.forEach(l => { if(l.main !== 'BREAK') cur += t2S(l.dur); });
             const target = 27000;
             if (cur < target) {
@@ -261,7 +265,7 @@
                     lastWork.dur = calcD(lastWork.in, lastWork.out);
                 }
             }
-            render(); saveSession(); alert("Global Sync with Seconds Complete!");
+            render(); saveSession(); alert("Global Sync Complete!");
         };
 
         window.mEdit = (i, f) => {
@@ -273,7 +277,6 @@
             }
         };
 
-        // --- BACKGROUND MONITORING ---
         function checkAutoTimeTrigger() {
             if (!config.autoWork || state === "IDLE" || state === "BREAK") return;
             const now = new Date();
@@ -309,7 +312,6 @@
             }
         }
 
-        // --- SESSION & EVENTS ---
         function saveSession() {
             if(!user) return;
             localStorage.setItem(`activeLogs_${user}`, JSON.stringify(logs));
@@ -346,6 +348,7 @@
         };
 
         document.getElementById('finishShiftBtn').onclick = async () => {
+            if (logs.length === 0) return alert("No logs recorded.");
             if(!confirm("End shift?")) return;
             const now = new Date();
             const timeStr = fS((now.getHours() * 3600) + (now.getMinutes() * 60), true);
@@ -360,6 +363,8 @@
             if(confirm("Wipe today's logs?")) {
                 logs = []; state = "IDLE"; shiftFinished = false; 
                 saveSession(); render(); updateUI();
+                document.getElementById('finishShiftBtn').classList.add('hidden');
+                document.getElementById('resetShiftBtn').classList.add('hidden');
             }
         };
 
@@ -371,14 +376,14 @@
         };
 
         document.getElementById('settingsBtn').onclick = () => {
-            document.getElementById('cfgTech').value = config.tech;
-            document.getElementById('cfgShift').value = config.shift;
-            document.getElementById('autoWorkToggle').checked = config.autoWork;
-            document.getElementById('setIn').value = config.in;
-            document.getElementById('setB1').value = config.b1;
-            document.getElementById('setL').value = config.l;
-            document.getElementById('setB2').value = config.b2;
-            document.getElementById('setOut').value = config.out;
+            document.getElementById('cfgTech').value = config.tech || '';
+            document.getElementById('cfgShift').value = config.shift || 'Day';
+            document.getElementById('autoWorkToggle').checked = !!config.autoWork;
+            document.getElementById('setIn').value = config.in || '';
+            document.getElementById('setB1').value = config.b1 || '';
+            document.getElementById('setL').value = config.l || '';
+            document.getElementById('setB2').value = config.b2 || '';
+            document.getElementById('setOut').value = config.out || '';
             document.getElementById('settingsModal').classList.remove('hidden');
         };
 
@@ -395,7 +400,7 @@
         };
 
         document.getElementById('mainCopyBtn').onclick = () => {
-            const txt = logs.map(l => `${l.tech}\t${user}\t${config.shift}\t${getDashDate()}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\tNO`).join('\n');
+            const txt = logs.slice().reverse().map(l => `${l.tech}\t${user}\t${config.shift}\t${getDashDate()}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\tNO`).join('\n');
             navigator.clipboard.writeText(txt); alert("Copied!");
         };
 
@@ -410,7 +415,7 @@
                 const div = document.createElement('div');
                 div.className = "history-card p-4 rounded-xl flex justify-between items-center";
                 div.innerHTML = `<div><p class="font-black text-blue-400">ID: ${doc.id.substring(0,6)}</p><p class="text-[10px] text-slate-500">${d.logs.length} entries</p></div>
-                <button onclick="navigator.clipboard.writeText(JSON.stringify(this.dataset.logs))" data-logs='${JSON.stringify(d.logs)}' class="bg-blue-600 px-3 py-1 rounded text-[10px]">COPY</button>`;
+                <button onclick='navigator.clipboard.writeText(JSON.stringify(${JSON.stringify(d.logs)}))' class="bg-blue-600 px-3 py-1 rounded text-[10px]">COPY JSON</button>`;
                 list.appendChild(div);
             });
         };
