@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Logger | v2.6 Stable</title>
+    <title>Pro Logger | v2.7 OT Edition</title>
     <script src="https://cdn.tailwindcss.com/3.4.3"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -15,9 +15,8 @@
         .data-grid td { border-bottom: 1px solid #334155; }
         .active-row { background-color: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; }
         input, select { background-color: #0f172a !important; border: 1px solid #334155 !important; color: white !important; }
-        .time-cell:hover { cursor: pointer; text-decoration: underline; color: #60a5fa; }
-        button:disabled { opacity: 0.3; cursor: not-allowed; filter: grayscale(1); }
-        .history-card { background: #1e293b; border: 1px solid #334155; }
+        .progress-container { height: 8px; background: #334155; border-radius: 4px; overflow: hidden; }
+        #progressBar { height: 100%; width: 0%; transition: width 0.5s ease; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -31,20 +30,32 @@
     </div>
 
     <div id="mainApp" class="max-w-[1500px] mx-auto hidden">
-        <div class="flex justify-between items-center mb-8">
+        <div class="flex justify-between items-center mb-4">
             <div>
                 <h1 class="text-2xl font-black text-white italic tracking-tighter">TASK LOGGER <span class="text-blue-500">PRO</span></h1>
                 <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">User: <span id="userDisp" class="text-blue-400">...</span> | Tech: <span id="techDisp" class="text-blue-400">...</span></p>
             </div>
             <div class="flex gap-2">
+                <button onclick="exportToCSV()" class="bg-emerald-600/20 text-emerald-500 border border-emerald-500/30 px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-600 hover:text-white transition-all">📥 EXPORT CSV</button>
                 <button id="historyBtn" class="bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 hover:bg-slate-700 text-xs font-bold">📜 HISTORY</button>
                 <button id="settingsBtn" class="bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 hover:bg-slate-700 text-xs font-bold">⚙️ SETTINGS</button>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <div class="flex justify-between text-[10px] font-black uppercase text-slate-500 mb-2">
+                <span>Shift Goal: 07:30:00</span>
+                <span id="progressPercent">0%</span>
+            </div>
+            <div class="progress-container">
+                <div id="progressBar" class="bg-blue-500 shadow-[0_0_10px_#3b82f6]"></div>
             </div>
         </div>
 
         <div class="bg-slate-800/50 p-6 rounded-3xl border border-slate-700 mb-8 flex flex-wrap gap-6 items-center justify-between shadow-xl">
             <div class="flex gap-3">
                 <button id="mainActionButton" class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl font-black text-lg shadow-lg">START WORK</button>
+                <button id="startOTBtn" class="bg-purple-600 hover:bg-purple-500 text-white px-8 py-4 rounded-2xl font-black text-lg shadow-lg hidden">START OT</button>
                 <button id="finishShiftBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-4 rounded-2xl font-bold hidden">FINISH SHIFT</button>
                 <button id="resetShiftBtn" class="bg-red-600/20 text-red-500 border border-red-500/30 hover:bg-red-600 hover:text-white px-6 py-4 rounded-2xl font-bold hidden transition-all uppercase text-xs">RESET</button>
             </div>
@@ -77,20 +88,10 @@
             <div class="p-6 bg-slate-900/80 border-t border-slate-700 flex justify-between items-center">
                 <div class="flex items-center gap-4">
                     <button id="globalFixBtn" disabled class="bg-indigo-600 text-white px-6 py-3 rounded-xl font-black text-sm hover:bg-indigo-500 transition-all shadow-lg">🪄 AUTO-SYNC (07:30)</button>
-                    <span id="lockStatus" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Locked: Finish Shift first</span>
+                    <span id="lockStatus" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Finish Shift first</span>
                 </div>
                 <button id="mainCopyBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-12 py-4 rounded-2xl font-black text-lg">COPY OUTPUT</button>
             </div>
-        </div>
-    </div>
-
-    <div id="historyModal" class="modal fixed inset-0 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-slate-700 p-8 rounded-[2rem] w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl text-sm">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-black text-blue-400 uppercase">Shift History</h2>
-                <button onclick="document.getElementById('historyModal').classList.add('hidden')" class="text-slate-500 text-2xl">✕</button>
-            </div>
-            <div id="historyList" class="flex-1 overflow-y-auto space-y-4 pr-2"></div>
         </div>
     </div>
 
@@ -101,10 +102,6 @@
                 <div><label class="text-[10px] text-slate-500 font-bold uppercase">Tech ID</label><input type="text" id="cfgTech" class="w-full p-3 rounded-xl mt-1"></div>
                 <div><label class="text-[10px] text-slate-500 font-bold uppercase">Shift</label><select id="cfgShift" class="w-full p-3 rounded-xl mt-1"><option>Day</option><option>Night</option></select></div>
             </div>
-            <div class="bg-blue-600/10 border border-blue-500/20 p-5 rounded-2xl mb-8 flex items-center justify-between">
-                <div><h4 class="font-bold text-blue-400">Smart Auto-Break</h4><p class="text-[10px] text-slate-500">Auto-triggers break logs at scheduled times.</p></div>
-                <input type="checkbox" id="autoWorkToggle" class="w-6 h-6 rounded">
-            </div>
             <div class="grid grid-cols-5 gap-2 mb-8">
                 <div><label class="text-[9px] text-slate-500">IN</label><input type="time" id="setIn" class="w-full p-2 text-xs rounded-lg"></div>
                 <div><label class="text-[9px] text-slate-500">B1</label><input type="time" id="setB1" class="w-full p-2 text-xs rounded-lg"></div>
@@ -112,13 +109,16 @@
                 <div><label class="text-[9px] text-slate-500">B2</label><input type="time" id="setB2" class="w-full p-2 text-xs rounded-lg"></div>
                 <div><label class="text-[9px] text-slate-500">OUT</label><input type="time" id="setOut" class="w-full p-2 text-xs rounded-lg"></div>
             </div>
-            <button id="saveSettings" class="w-full bg-blue-600 py-4 rounded-xl font-black">Save Changes</button>
+            <div class="flex gap-4">
+                <button onclick="document.getElementById('settingsModal').classList.add('hidden')" class="flex-1 bg-slate-800 py-4 rounded-xl font-black hover:bg-slate-700">Cancel</button>
+                <button id="saveSettings" class="flex-1 bg-blue-600 py-4 rounded-xl font-black hover:bg-blue-500">Save Changes</button>
+            </div>
         </div>
     </div>
 
     <div id="taskModal" class="modal fixed inset-0 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-700 p-8 rounded-3xl w-full max-w-md shadow-2xl">
-            <h2 class="text-lg font-black mb-6 uppercase text-blue-400">Select Task</h2>
+            <h2 id="taskModalTitle" class="text-lg font-black mb-6 uppercase text-blue-400">Select Task</h2>
             <div class="space-y-4">
                 <div><label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Category</label><select id="modalMainCat" class="w-full p-4 rounded-xl mt-1"></select></div>
                 <div><label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Sub-Category</label><select id="modalSubCat" class="w-full p-4 rounded-xl mt-1"></select></div>
@@ -128,19 +128,19 @@
     </div>
 
     <script>
-        // --- CONFIG & FIREBASE ---
         const firebaseConfig = { apiKey: "AIzaSyAlFMmWOPmRZg8QCXS9NSORiVIRUFj59LU", authDomain: "tscm-547ea.firebaseapp.com", projectId: "tscm-547ea", storageBucket: "tscm-547ea.firebasestorage.app", messagingSenderId: "898083203071", appId: "1:898083203071:web:b2134307b5ad610dfce9ca" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
         const categoryData = { "SARANAC": ["CF"], "ACCUPLUS": ["DEM", "I3", "PCS", "REFIX", "i3QA", "RQA"], "DOWNTIME": ["NoProject"], "TRAINER": ["Formal - Accuplus"] };
-        let user = '', logs = [], config = {}, state = "IDLE", timerInterval, monitorInterval, shiftFinished = false;
+        const SHIFT_GOAL_SECONDS = 27000; // 07:30:00
 
-        // --- UTILITIES ---
+        let user = '', logs = [], config = {}, state = "IDLE", timerInterval, monitorInterval, shiftFinished = false, isOT = false;
+
+        // Utilities
         const t2S = (t) => { 
             if(!t || t === '...' || typeof t !== 'string') return 0; 
             const p = t.split(':').map(Number); 
-            // Fix: Handle both HH:MM and HH:MM:SS
             if (p.length === 2) return (p[0] * 3600) + (p[1] * 60);
             return (p[0] * 3600) + (p[1] * 60) + (p[2] || 0); 
         };
@@ -167,31 +167,7 @@
             return `${timeStr}:${r}`;
         };
 
-        const getDashDate = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
-        // --- UPDATED ROW FIX (Index 0 is newest) ---
-        window.rowFix = (i) => {
-            const log = logs[i];
-            if (log.main === "BREAK") {
-                const breakSegments = logs.filter(l => l.main === "BREAK").reverse();
-                const bIdx = breakSegments.indexOf(log) + 1;
-                if (bIdx === 1) log.in = addRandomSeconds(config.b1);
-                else if (bIdx === 2) log.in = addRandomSeconds(config.l);
-                else if (bIdx === 3) log.in = addRandomSeconds(config.b2);
-            } else {
-                // If it's the oldest task (at the end of the array)
-                if (i === logs.length - 1) {
-                    log.in = addRandomSeconds(config.in);
-                } else {
-                    // Start of this task = Out of the task chronological before it (index i+1)
-                    log.in = logs[i + 1].out;
-                }
-            }
-            if (log.out !== "...") log.dur = calcD(log.in, log.out);
-            render(); saveSession();
-        };
-
-        // --- CORE LOGIC ---
+        // UI Updates
         function render() {
             const body = document.getElementById('logBody');
             if(logs.length === 0) {
@@ -209,7 +185,7 @@
                         <td class="px-6 py-4 font-black text-blue-500">${l.main}</td>
                         <td class="px-6 py-4 text-xs text-slate-400 font-bold">${l.sub}</td>
                         <td class="px-6 py-4 text-center flex justify-center gap-2">
-                            <button onclick="rowFix(${i})" class="text-amber-500 hover:scale-125 transition-all" title="Auto-Sync">🪄</button>
+                            <button onclick="rowFix(${i})" class="text-emerald-500 hover:scale-125 transition-all" title="Sync Entry">✅</button>
                             <button onclick="if(confirm('Delete?')){logs.splice(${i},1); saveSession(); render();}" class="text-red-500 opacity-50 hover:opacity-100 transition-all">✖</button>
                         </td>
                     </tr>`).join('');
@@ -217,6 +193,26 @@
             updateTotal();
         }
 
+        function updateTotal() {
+            let t = 0; logs.forEach(l => { if(l.main !== 'BREAK' && l.dur !== '...') t += t2S(l.dur); });
+            document.getElementById('totalWorkTime').textContent = fS(t);
+            
+            // Progress Bar Logic
+            const percent = Math.min((t / SHIFT_GOAL_SECONDS) * 100, 100);
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('progressPercent').textContent = Math.floor(percent) + '%';
+            
+            // Toggle OT Button
+            if (t >= SHIFT_GOAL_SECONDS && !shiftFinished) {
+                document.getElementById('startOTBtn').classList.remove('hidden');
+                document.getElementById('progressBar').classList.replace('bg-blue-500', 'bg-emerald-500');
+            } else {
+                document.getElementById('startOTBtn').classList.add('hidden');
+                document.getElementById('progressBar').classList.replace('bg-emerald-500', 'bg-blue-500');
+            }
+        }
+
+        // Action Handlers
         document.getElementById('loginSubmit').onclick = async () => {
             user = document.getElementById('loginUsername').value.trim().toLowerCase();
             if(!user) return;
@@ -224,11 +220,15 @@
             document.getElementById('loginModal').classList.add('hidden');
             document.getElementById('mainApp').classList.remove('hidden');
             const snap = await db.collection("settings").doc(user).get();
-            config = snap.exists ? snap.data() : { tech: '0000', shift: 'Day', in: "06:00", b1: "08:30", l: "11:00", b2: "13:30", out: "15:00", autoWork: true };
+            config = snap.exists ? snap.data() : { tech: '0000', shift: 'Day', in: "06:00", b1: "08:30", l: "11:00", b2: "13:30", out: "15:00" };
             document.getElementById('techDisp').textContent = config.tech;
             initTaskModal(); loadSession();
-            if (monitorInterval) clearInterval(monitorInterval);
-            monitorInterval = setInterval(checkAutoTimeTrigger, 30000);
+        };
+
+        document.getElementById('startOTBtn').onclick = () => {
+            isOT = true;
+            document.getElementById('taskModalTitle').textContent = "Select OT Task";
+            document.getElementById('taskModal').classList.remove('hidden');
         };
 
         function startNewSegment(newState, main, sub) {
@@ -246,43 +246,35 @@
             document.getElementById('resetShiftBtn').classList.remove('hidden');
         }
 
-        document.getElementById('globalFixBtn').onclick = () => {
-            if(logs.length === 0) return;
-            // Oldest entry (last in array) start time
-            logs[logs.length-1].in = addRandomSeconds(config.in);
-            for (let i = logs.length-2; i >= 0; i--) {
-                logs[i].in = logs[i+1].out;
-                if(logs[i].out !== "...") logs[i].dur = calcD(logs[i].in, logs[i].out);
-            }
-            // 07:30 Total Logic
-            let cur = 0; logs.forEach(l => { if(l.main !== 'BREAK') cur += t2S(l.dur); });
-            const target = 27000;
-            if (cur < target) {
-                const lastWork = logs.find(l => l.main !== 'BREAK');
-                if (lastWork) {
-                    let totalSec = t2S(lastWork.out) + (target - cur);
-                    lastWork.out = fS(totalSec);
-                    lastWork.dur = calcD(lastWork.in, lastWork.out);
-                }
-            }
-            render(); saveSession(); alert("Global Sync Complete!");
-        };
-
-        window.mEdit = (i, f) => {
-            const val = prompt(`Edit ${f.toUpperCase()} (HH:MM:SS):`, logs[i][f]);
-            if (val) {
-                logs[i][f] = val;
-                if(logs[i].out !== "...") logs[i].dur = calcD(logs[i].in, logs[i].out);
-                render(); saveSession();
-            }
-        };
-
-        function checkAutoTimeTrigger() {
-            if (!config.autoWork || state === "IDLE" || state === "BREAK") return;
-            const now = new Date();
-            const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-            if ([config.b1, config.l, config.b2].includes(timeStr)) startNewSegment("BREAK", "BREAK", "BREAK");
+        function exportToCSV() {
+            if (logs.length === 0) return alert("No data to export");
+            let csv = "Tech#,User,Shift,Date,In,Out,Duration,Category,Sub-Category\n";
+            logs.slice().reverse().forEach(l => {
+                csv += `${l.tech},${user},${config.shift},${new Date().toLocaleDateString()},${l.in},${l.out},${l.dur},${l.main},${l.sub}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `Logs_${user}_${new Date().toISOString().split('T')[0]}.csv`);
+            a.click();
         }
+
+        // Logic Helpers
+        window.rowFix = (i) => {
+            const log = logs[i];
+            if (log.main === "BREAK") {
+                const bCount = logs.filter((l, idx) => l.main === "BREAK" && idx >= i).length;
+                if (bCount === 1) log.in = addRandomSeconds(config.b1);
+                else if (bCount === 2) log.in = addRandomSeconds(config.l);
+            } else if (i === logs.length - 1) {
+                log.in = addRandomSeconds(config.in);
+            } else {
+                log.in = logs[i + 1].out;
+            }
+            if (log.out !== "...") log.dur = calcD(log.in, log.out);
+            render(); saveSession();
+        };
 
         function startTimer() {
             clearInterval(timerInterval);
@@ -294,11 +286,6 @@
                     updateTotal();
                 }
             }, 1000);
-        }
-
-        function updateTotal() {
-            let t = 0; logs.forEach(l => { if(l.main !== 'BREAK' && l.dur !== '...') t += t2S(l.dur); });
-            document.getElementById('totalWorkTime').textContent = fS(t);
         }
 
         function updateUI() {
@@ -313,7 +300,6 @@
         }
 
         function saveSession() {
-            if(!user) return;
             localStorage.setItem(`activeLogs_${user}`, JSON.stringify(logs));
             localStorage.setItem(`activeState_${user}`, state);
             localStorage.setItem(`finished_${user}`, shiftFinished);
@@ -321,17 +307,15 @@
 
         function loadSession() {
             const sLogs = localStorage.getItem(`activeLogs_${user}`);
-            const sState = localStorage.getItem(`activeState_${user}`);
-            const sFinish = localStorage.getItem(`finished_${user}`);
             if (sLogs) {
                 logs = JSON.parse(sLogs);
                 logs.forEach(l => { if(l.rawStart) l.rawStart = new Date(l.rawStart); });
             }
-            if (sState) state = sState;
-            if (sFinish === "true") {
-                shiftFinished = true; state = "IDLE";
+            state = localStorage.getItem(`activeState_${user}`) || "IDLE";
+            shiftFinished = localStorage.getItem(`finished_${user}`) === "true";
+            if (shiftFinished) {
                 document.getElementById('globalFixBtn').disabled = false;
-                document.getElementById('lockStatus').textContent = "Sync Ready (07:30)";
+                document.getElementById('lockStatus').textContent = "Sync Ready";
             }
             if (state !== "IDLE" || logs.length > 0) { 
                 startTimer(); updateUI(); 
@@ -341,14 +325,25 @@
             render();
         }
 
+        // Global Event Listeners
         document.getElementById('mainActionButton').onclick = () => {
             if (shiftFinished) { logs = []; shiftFinished = false; saveSession(); }
-            if (state === "IDLE" || state === "BREAK") document.getElementById('taskModal').classList.remove('hidden');
-            else startNewSegment("BREAK", "BREAK", "BREAK");
+            if (state === "IDLE" || state === "BREAK") {
+                isOT = false;
+                document.getElementById('taskModalTitle').textContent = "Select Task";
+                document.getElementById('taskModal').classList.remove('hidden');
+            } else startNewSegment("BREAK", "BREAK", "BREAK");
+        };
+
+        document.getElementById('confirmTask').onclick = () => {
+            const category = document.getElementById('modalMainCat').value;
+            const sub = document.getElementById('modalSubCat').value;
+            const prefix = isOT ? "[OT] " : "";
+            startNewSegment("WORKING", prefix + category, sub);
+            document.getElementById('taskModal').classList.add('hidden');
         };
 
         document.getElementById('finishShiftBtn').onclick = async () => {
-            if (logs.length === 0) return alert("No logs recorded.");
             if(!confirm("End shift?")) return;
             const now = new Date();
             const timeStr = fS((now.getHours() * 3600) + (now.getMinutes() * 60), true);
@@ -359,32 +354,25 @@
             await db.collection("work_logs").add({ user, logs, tech: config.tech, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
         };
 
-        document.getElementById('resetShiftBtn').onclick = () => {
-            if(confirm("Wipe today's logs?")) {
-                logs = []; state = "IDLE"; shiftFinished = false; 
-                saveSession(); render(); updateUI();
-                document.getElementById('finishShiftBtn').classList.add('hidden');
-                document.getElementById('resetShiftBtn').classList.add('hidden');
-            }
+        document.getElementById('settingsBtn').onclick = () => {
+            document.getElementById('cfgTech').value = config.tech || '';
+            document.getElementById('setIn').value = config.in || '';
+            document.getElementById('settingsModal').classList.remove('hidden');
         };
 
         document.getElementById('saveSettings').onclick = async () => {
-            config = { tech: document.getElementById('cfgTech').value, shift: document.getElementById('cfgShift').value, autoWork: document.getElementById('autoWorkToggle').checked, in: document.getElementById('setIn').value, b1: document.getElementById('setB1').value, l: document.getElementById('setL').value, b2: document.getElementById('setB2').value, out: document.getElementById('setOut').value };
+            config = { 
+                tech: document.getElementById('cfgTech').value, 
+                shift: document.getElementById('cfgShift').value, 
+                in: document.getElementById('setIn').value,
+                b1: document.getElementById('setB1').value,
+                l: document.getElementById('setL').value,
+                b2: document.getElementById('setB2').value,
+                out: document.getElementById('setOut').value
+            };
             await db.collection("settings").doc(user).set(config);
-            document.getElementById('settingsModal').classList.add('hidden');
             document.getElementById('techDisp').textContent = config.tech;
-        };
-
-        document.getElementById('settingsBtn').onclick = () => {
-            document.getElementById('cfgTech').value = config.tech || '';
-            document.getElementById('cfgShift').value = config.shift || 'Day';
-            document.getElementById('autoWorkToggle').checked = !!config.autoWork;
-            document.getElementById('setIn').value = config.in || '';
-            document.getElementById('setB1').value = config.b1 || '';
-            document.getElementById('setL').value = config.l || '';
-            document.getElementById('setB2').value = config.b2 || '';
-            document.getElementById('setOut').value = config.out || '';
-            document.getElementById('settingsModal').classList.remove('hidden');
+            document.getElementById('settingsModal').classList.add('hidden');
         };
 
         function initTaskModal() {
@@ -394,30 +382,9 @@
             m.onchange();
         }
 
-        document.getElementById('confirmTask').onclick = () => {
-            startNewSegment("WORKING", document.getElementById('modalMainCat').value, document.getElementById('modalSubCat').value);
-            document.getElementById('taskModal').classList.add('hidden');
-        };
-
         document.getElementById('mainCopyBtn').onclick = () => {
-            const txt = logs.slice().reverse().map(l => `${l.tech}\t${user}\t${config.shift}\t${getDashDate()}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\tNO`).join('\n');
+            const txt = logs.slice().reverse().map(l => `${l.tech}\t${user}\t${config.shift}\t${new Date().toLocaleDateString()}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}`).join('\n');
             navigator.clipboard.writeText(txt); alert("Copied!");
-        };
-
-        document.getElementById('historyBtn').onclick = async () => {
-            const list = document.getElementById('historyList');
-            list.innerHTML = 'Loading...';
-            document.getElementById('historyModal').classList.remove('hidden');
-            const snap = await db.collection("work_logs").where("user", "==", user).orderBy("timestamp", "desc").limit(10).get();
-            list.innerHTML = snap.empty ? 'No records.' : '';
-            snap.forEach(doc => {
-                const d = doc.data();
-                const div = document.createElement('div');
-                div.className = "history-card p-4 rounded-xl flex justify-between items-center";
-                div.innerHTML = `<div><p class="font-black text-blue-400">ID: ${doc.id.substring(0,6)}</p><p class="text-[10px] text-slate-500">${d.logs.length} entries</p></div>
-                <button onclick='navigator.clipboard.writeText(JSON.stringify(${JSON.stringify(d.logs)}))' class="bg-blue-600 px-3 py-1 rounded text-[10px]">COPY JSON</button>`;
-                list.appendChild(div);
-            });
         };
     </script>
 </body>
