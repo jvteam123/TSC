@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Task Logger PRO | v3.8 Final Release</title>
+    <title>Task Logger PRO | v3.9 Full Restore</title>
     <script src="https://cdn.tailwindcss.com/3.4.3"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -38,9 +38,9 @@
                 <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">User: <span id="userDisp" class="text-blue-400">...</span> | Tech: <span id="techDisp" class="text-blue-400">...</span></p>
             </div>
             <div class="flex gap-2">
-                <button onclick="exportToCSV()" class="bg-emerald-600/20 text-emerald-500 border border-emerald-500/30 px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-600 hover:text-white transition-all">📥 CSV</button>
-                <button id="historyBtn" class="bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 hover:bg-slate-700 text-xs font-bold">📜 HISTORY</button>
-                <button id="settingsBtn" class="bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 hover:bg-slate-700 text-xs font-bold">⚙️ SETTINGS</button>
+                <button onclick="exportToCSV()" class="bg-emerald-600/20 text-emerald-500 border border-emerald-500/30 px-4 py-2 rounded-xl text-xs font-bold">📥 CSV</button>
+                <button id="historyBtn" class="bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 text-xs font-bold">📜 HISTORY</button>
+                <button id="settingsBtn" class="bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 text-xs font-bold">⚙️ SETTINGS</button>
             </div>
         </div>
 
@@ -54,13 +54,13 @@
 
         <div class="bg-slate-800/50 p-6 rounded-3xl border border-slate-700 mb-8 flex flex-wrap gap-6 items-center justify-between shadow-xl">
             <div class="flex gap-3">
-                <button id="mainActionButton" class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl font-black text-lg shadow-lg">START WORK</button>
-                <button id="startOTBtn" class="bg-purple-600 hover:bg-purple-500 text-white px-8 py-4 rounded-2xl font-black text-lg shadow-lg hidden">START OVERTIME</button>
+                <button id="mainActionButton" class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl font-black text-lg">START WORK</button>
+                <button id="startOTBtn" class="bg-purple-600 hover:bg-purple-500 text-white px-8 py-4 rounded-2xl font-black text-lg hidden">START OVERTIME</button>
                 <button id="finishShiftBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-4 rounded-2xl font-bold hidden">FINISH SHIFT</button>
-                <button id="resetShiftBtn" class="bg-red-600/20 text-red-500 border border-red-500/30 hover:bg-red-600 hover:text-white px-4 py-4 rounded-2xl font-bold hidden text-xs uppercase">Reset</button>
+                <button id="resetShiftBtn" class="bg-red-600/20 text-red-500 border border-red-500/30 px-4 py-4 rounded-2xl font-bold hidden text-xs uppercase">Reset</button>
             </div>
             <div class="flex items-center gap-6 text-right">
-                <div><p class="text-[10px] text-slate-500 font-black uppercase">Live Segment</p><p id="liveClock" class="text-3xl font-mono font-bold text-blue-400">00:00:00</p></div>
+                <div><p class="text-[10px] text-slate-500 font-black uppercase">Live Timer</p><p id="liveClock" class="text-3xl font-mono font-bold text-blue-400">00:00:00</p></div>
                 <div class="border-l border-slate-700 pl-6"><p class="text-[10px] text-slate-500 font-black uppercase">Shift Total</p><p id="totalWorkTime" class="text-xl font-mono font-bold text-emerald-400">00:00:00</p></div>
             </div>
         </div>
@@ -83,14 +83,14 @@
                 </thead>
                 <tbody id="logBody" class="text-sm font-medium"></tbody>
             </table>
-            <div id="emptyState" class="p-24 text-center text-slate-600 font-bold italic">No active logs. Click Start Work.</div>
+            <div id="emptyState" class="p-24 text-center text-slate-600 font-bold italic">No active logs.</div>
             
             <div class="p-6 bg-slate-900/80 border-t border-slate-700 flex justify-between items-center">
                 <div class="flex items-center gap-4">
-                    <button id="globalFixBtn" disabled class="bg-indigo-600 text-white px-6 py-3 rounded-xl font-black text-sm hover:bg-indigo-500 transition-all">✅ AUTO-SYNC (07:30)</button>
-                    <span id="lockStatus" class="text-[10px] font-bold text-slate-500 uppercase">Finish Shift first</span>
+                    <button id="globalFixBtn" disabled class="bg-indigo-600 text-white px-6 py-3 rounded-xl font-black text-sm hover:bg-indigo-500">✅ AUTO-PILOT (SYNC 07:30)</button>
+                    <span id="lockStatus" class="text-[10px] font-bold text-slate-500 uppercase italic">Locked: Finish Shift First</span>
                 </div>
-                <button id="mainCopyBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-12 py-4 rounded-2xl font-black text-lg">COPY OUTPUT</button>
+                <button id="mainCopyBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-12 py-4 rounded-2xl font-black text-lg">COPY FOR SPREADSHEET</button>
             </div>
         </div>
     </div>
@@ -102,7 +102,6 @@
                 <div><label class="text-[10px] text-slate-500 font-bold uppercase">Tech ID</label><input type="text" id="cfgTech" class="w-full p-3 rounded-xl mt-1"></div>
                 <div><label class="text-[10px] text-slate-500 font-bold uppercase">Shift</label><select id="cfgShift" class="w-full p-3 rounded-xl mt-1"><option>Day</option><option>Night</option></select></div>
             </div>
-            <p class="text-[10px] text-slate-500 font-black uppercase mb-2">Default Shift Schedule</p>
             <div class="grid grid-cols-5 gap-2 mb-8">
                 <div><label class="text-[9px] text-slate-500">In</label><input type="time" id="setIn" class="w-full p-2 text-xs rounded-lg"></div>
                 <div><label class="text-[9px] text-slate-500">B1</label><input type="time" id="setB1" class="w-full p-2 text-xs rounded-lg"></div>
@@ -110,10 +109,7 @@
                 <div><label class="text-[9px] text-slate-500">B2</label><input type="time" id="setB2" class="w-full p-2 text-xs rounded-lg"></div>
                 <div><label class="text-[9px] text-slate-500">Out</label><input type="time" id="setOut" class="w-full p-2 text-xs rounded-lg"></div>
             </div>
-            <div class="flex gap-4">
-                <button onclick="document.getElementById('settingsModal').classList.add('hidden')" class="w-full bg-slate-700 py-4 rounded-xl font-black">Cancel</button>
-                <button id="saveSettings" class="w-full bg-blue-600 py-4 rounded-xl font-black">Save Settings</button>
-            </div>
+            <button id="saveSettings" class="w-full bg-blue-600 py-4 rounded-xl font-black">SAVE SETTINGS</button>
         </div>
     </div>
 
@@ -124,7 +120,7 @@
                 <div><label class="text-[10px] font-bold text-slate-500 uppercase">Category</label><select id="modalMainCat" class="w-full p-4 rounded-xl mt-1"></select></div>
                 <div><label class="text-[10px] font-bold text-slate-500 uppercase">Sub-Category</label><select id="modalSubCat" class="w-full p-4 rounded-xl mt-1"></select></div>
             </div>
-            <button id="confirmTask" class="w-full bg-blue-600 px-8 py-4 rounded-xl font-black mt-8 uppercase">Start Recording</button>
+            <button id="confirmTask" class="w-full bg-blue-600 px-8 py-4 rounded-xl font-black mt-8 uppercase">Start Segment</button>
         </div>
     </div>
 
@@ -136,7 +132,7 @@
     </div>
 
     <script>
-        // CONFIG & CORE
+        // FIREBASE SETUP
         const firebaseConfig = { apiKey: "AIzaSyAlFMmWOPmRZg8QCXS9NSORiVIRUFj59LU", authDomain: "tscm-547ea.firebaseapp.com", projectId: "tscm-547ea", storageBucket: "tscm-547ea.firebasestorage.app", messagingSenderId: "898083203071", appId: "1:898083203071:web:b2134307b5ad610dfce9ca" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
@@ -146,7 +142,7 @@
 
         let user = '', logs = [], config = {}, state = "IDLE", timerInterval, shiftFinished = false, isOT = false;
 
-        // FORMATTERS
+        // CORE TOOLS
         const t2S = (t) => { if(!t || t === '...') return 0; const p = t.split(':').map(Number); return (p[0]*3600) + (p[1]*60) + (p[2] || 0); };
         const fS = (s, randomize = false) => { 
             const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
@@ -204,10 +200,32 @@
             document.getElementById('resetShiftBtn').classList.remove('hidden');
             document.getElementById('startOTBtn').classList.add('hidden');
             document.getElementById('globalFixBtn').disabled = true;
-            document.getElementById('lockStatus').textContent = "Finish Shift first";
+            document.getElementById('lockStatus').textContent = "Locked: Finish Shift First";
         }
 
-        // BUTTON LOGIC
+        // AUTO-PILOT (SYNC ENGINE)
+        document.getElementById('globalFixBtn').onclick = () => {
+            if (!logs.length) return;
+            // Set first segment to shift start time
+            logs[logs.length-1].in = addRandomSeconds(config.in);
+            
+            // Calculate total work done
+            let currentWork = 0;
+            for(let i=1; i<logs.length; i++) { if(l = logs[i], l.main !== 'BREAK' && !l.main.includes('[OT]')) currentWork += t2S(l.dur); }
+            
+            // Adjust the final segment to fill the gap to 07:30:00
+            const needed = SHIFT_GOAL - currentWork;
+            if(needed > 0) { logs[0].out = fS(t2S(logs[0].in) + needed, true); logs[0].dur = calcD(logs[0].in, logs[0].out); }
+            
+            // Stitch segments together
+            for(let i=logs.length-2; i>=0; i--) { 
+                logs[i].in = logs[i+1].out; 
+                if(logs[i].out !== "...") logs[i].dur = calcD(logs[i].in, logs[i].out); 
+            }
+            render(); saveSession(); alert("Auto-Pilot Synchronized successfully.");
+        };
+
+        // UI ACTIONS
         document.getElementById('loginSubmit').onclick = async () => {
             user = document.getElementById('loginUsername').value.trim().toLowerCase();
             if(!user) return;
@@ -226,7 +244,7 @@
             else startSegment("BREAK", "BREAK", "BREAK");
         };
 
-        document.getElementById('startOTBtn').onclick = () => { isOT = true; document.getElementById('taskModalHeader').textContent = "OT Select"; document.getElementById('taskModal').classList.remove('hidden'); };
+        document.getElementById('startOTBtn').onclick = () => { isOT = true; document.getElementById('taskModalHeader').textContent = "OT Category"; document.getElementById('taskModal').classList.remove('hidden'); };
 
         document.getElementById('confirmTask').onclick = () => {
             const m = document.getElementById('modalMainCat').value, s = document.getElementById('modalSubCat').value;
@@ -235,7 +253,7 @@
         };
 
         document.getElementById('finishShiftBtn').onclick = async () => {
-            if(!confirm("Finish Shift?")) return;
+            if(!confirm("Finish Shift and Unlock Auto-Pilot?")) return;
             const now = new Date();
             const timeStr = fS((now.getHours() * 3600) + (now.getMinutes() * 60), true);
             if(logs.length > 0 && logs[0].out === "...") { logs[0].out = timeStr; logs[0].dur = calcD(logs[0].in, logs[0].out); }
@@ -248,27 +266,15 @@
         };
 
         document.getElementById('resetShiftBtn').onclick = () => { 
-            if(confirm("Reset current shift?")) { 
+            if(confirm("Reset everything?")) { 
                 logs=[]; state="IDLE"; shiftFinished=false; 
                 document.getElementById('globalFixBtn').disabled = true;
                 document.getElementById('startOTBtn').classList.add('hidden');
-                document.getElementById('lockStatus').textContent = "Finish Shift first";
+                document.getElementById('lockStatus').textContent = "Locked: Finish Shift First";
                 saveSession(); render(); updateUI(); 
             } 
         };
 
-        document.getElementById('globalFixBtn').onclick = () => {
-            if (!logs.length) return;
-            logs[logs.length-1].in = addRandomSeconds(config.in);
-            let workSec = 0;
-            for(let i=1; i<logs.length; i++) { if(l = logs[i], l.main !== 'BREAK' && !l.main.includes('[OT]')) workSec += t2S(l.dur); }
-            const needed = SHIFT_GOAL - workSec;
-            if(needed > 0) { logs[0].out = fS(t2S(logs[0].in) + needed, true); logs[0].dur = calcD(logs[0].in, logs[0].out); }
-            for(let i=logs.length-2; i>=0; i--) { logs[i].in = logs[i+1].out; if(logs[i].out !== "...") logs[i].dur = calcD(logs[i].in, logs[i].out); }
-            render(); saveSession(); alert("Auto-Sync Complete.");
-        };
-
-        // UI HELPERS
         function updateUI() {
             const btn = document.getElementById('mainActionButton');
             if (shiftFinished) { btn.textContent = "NEW SHIFT"; btn.className = "bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black"; }
@@ -277,6 +283,7 @@
                 btn.className = state === "WORKING" ? "bg-amber-500 text-white px-8 py-4 rounded-2xl font-black" : "bg-blue-600 text-white px-8 py-4 rounded-2xl font-black";
             }
         }
+
         function startTimer() { clearInterval(timerInterval); timerInterval = setInterval(() => { if (logs.length > 0 && state !== 'IDLE') { const diff = Math.floor((new Date() - logs[0].rawStart)/1000); logs[0].dur = fS(diff); document.getElementById('liveClock').textContent = fS(diff); } updateTotal(); }, 1000); }
         function saveSession() { if(user) { localStorage.setItem(`logs_${user}`, JSON.stringify(logs)); localStorage.setItem(`state_${user}`, state); localStorage.setItem(`finished_${user}`, shiftFinished); } }
         function loadSession() {
@@ -303,10 +310,9 @@
 
         window.mEdit = (i, f) => { const v = prompt(`Edit ${f.toUpperCase()}:`, logs[i][f]); if (v) { logs[i][f] = v; if(logs[i].out !== "...") logs[i].dur = calcD(logs[i].in, logs[i].out); render(); saveSession(); } };
 
-        // DATA EXPORT (THE ARRANGEMENT)
         document.getElementById('mainCopyBtn').onclick = () => {
             const txt = logs.map(l => `${config.tech}\t${user}\t${l.shiftName || config.shift}\t${l.date}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\t${l.main.includes('[OT]')?'YES':'NO'}`).join('\n');
-            navigator.clipboard.writeText(txt); alert("Copied for Spreadsheet!");
+            navigator.clipboard.writeText(txt); alert("Copied 10 Columns to Clipboard!");
         };
 
         function exportToCSV() {
@@ -315,33 +321,27 @@
             const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = `Logs_${user}.csv`; a.click();
         }
 
-        // SETTINGS & HISTORY
         document.getElementById('saveSettings').onclick = async () => {
             config = { tech: document.getElementById('cfgTech').value, shift: document.getElementById('cfgShift').value, in: document.getElementById('setIn').value, b1: document.getElementById('setB1').value, l: document.getElementById('setL').value, b2: document.getElementById('setB2').value, out: document.getElementById('setOut').value };
             await db.collection("settings").doc(user).set(config);
             document.getElementById('settingsModal').classList.add('hidden');
             document.getElementById('techDisp').textContent = config.tech;
         };
-        document.getElementById('settingsBtn').onclick = () => { 
-            document.getElementById('cfgTech').value = config.tech || '';
-            document.getElementById('cfgShift').value = config.shift || 'Day';
-            document.getElementById('settingsModal').classList.remove('hidden'); 
-        };
+        document.getElementById('settingsBtn').onclick = () => { document.getElementById('cfgTech').value = config.tech; document.getElementById('cfgShift').value = config.shift; document.getElementById('settingsModal').classList.remove('hidden'); };
         document.getElementById('historyBtn').onclick = loadHistory;
         async function loadHistory() {
-            const list = document.getElementById('historyList'); list.innerHTML = 'Fetching cloud records...'; document.getElementById('historyModal').classList.remove('hidden');
-            const snap = await db.collection("work_logs").where("user", "==", user).orderBy("timestamp", "desc").limit(15).get();
-            list.innerHTML = snap.empty ? 'No records found.' : '';
+            const list = document.getElementById('historyList'); list.innerHTML = 'Loading...'; document.getElementById('historyModal').classList.remove('hidden');
+            const snap = await db.collection("work_logs").where("user", "==", user).orderBy("timestamp", "desc").limit(10).get();
+            list.innerHTML = snap.empty ? 'No history.' : '';
             snap.forEach(doc => {
                 const d = doc.data(); const div = document.createElement('div');
                 div.className = "bg-slate-800 p-4 rounded-xl flex justify-between items-center mb-2 border border-slate-700";
-                div.innerHTML = `<div><p class="font-black text-blue-400">${d.timestamp ? d.timestamp.toDate().toLocaleDateString() : 'N/A'}</p><p class="text-[10px] text-slate-500">${d.logs.length} Task Segments</p></div>
-                    <div class="flex gap-2"><button onclick="copyHistory('${doc.id}')" class="bg-blue-600 px-4 py-2 rounded-lg text-xs font-bold">COPY</button><button onclick="deleteHistory('${doc.id}')" class="bg-red-600/20 text-red-500 border border-red-500/30 px-3 py-2 rounded-lg text-xs hover:bg-red-600 hover:text-white">🗑️</button></div>`;
+                div.innerHTML = `<div><p class="font-black text-blue-400">${d.timestamp ? d.timestamp.toDate().toLocaleDateString() : 'N/A'}</p><p class="text-[10px] text-slate-500">${d.logs.length} Segments</p></div>
+                    <div class="flex gap-2"><button onclick="copyHistory('${doc.id}')" class="bg-blue-600 px-4 py-2 rounded-lg text-xs font-bold">COPY</button></div>`;
                 list.append(div); div.dataset.logData = JSON.stringify(d.logs);
             });
         }
         window.copyHistory = (id) => { const btn = event.target; const logsToCopy = JSON.parse(btn.closest('div.bg-slate-800').dataset.logData); const txt = logsToCopy.map(l => `${config.tech}\t${user}\t${l.shiftName || config.shift}\t${l.date}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\t${l.main.includes('[OT]')?'YES':'NO'}`).join('\n'); navigator.clipboard.writeText(txt); btn.textContent = "COPIED!"; setTimeout(() => btn.textContent = "COPY", 2000); };
-        window.deleteHistory = async (id) => { if(!confirm("Delete record permanently?")) return; await db.collection("work_logs").doc(id).delete(); loadHistory(); };
         function initTaskModal() { const m = document.getElementById('modalMainCat'), s = document.getElementById('modalSubCat'); m.innerHTML = Object.keys(categoryData).map(k => `<option value="${k}">${k}</option>`).join(''); m.onchange = () => s.innerHTML = categoryData[m.value].map(v => `<option value="${v}">${v}</option>`).join(''); m.onchange(); }
     </script>
 </body>
