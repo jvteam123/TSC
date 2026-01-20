@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Task Logger PRO | v3.3 Final Release</title>
+    <title>Task Logger PRO | v3.4 Final Production</title>
     <script src="https://cdn.tailwindcss.com/3.4.3"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -42,7 +42,7 @@
                 </div>
             </div>
             <div class="flex gap-2">
-                <button onclick="exportToCSV()" class="bg-emerald-600/20 text-emerald-500 border border-emerald-500/30 px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-600 hover:text-white transition-all">📥 EXPORT CSV</button>
+                <button onclick="exportToCSV()" class="bg-emerald-600/20 text-emerald-500 border border-emerald-500/30 px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-600 hover:text-white transition-all">📥 CSV</button>
                 <button id="historyBtn" class="bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 hover:bg-slate-700 text-xs font-bold">📜 HISTORY</button>
                 <button id="settingsBtn" class="bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 hover:bg-slate-700 text-xs font-bold">⚙️ SETTINGS</button>
             </div>
@@ -50,7 +50,7 @@
 
         <div class="mb-6">
             <div class="flex justify-between text-[10px] font-black uppercase text-slate-500 mb-1">
-                <span>Shift Goal (07:30:00 Work Time)</span>
+                <span>Shift Goal (07:30:00)</span>
                 <span id="progressPercent">0%</span>
             </div>
             <div class="progress-container"><div id="progressBar" class="bg-blue-500"></div></div>
@@ -61,7 +61,7 @@
                 <button id="mainActionButton" class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl font-black text-lg shadow-lg">START WORK</button>
                 <button id="startOTBtn" class="bg-purple-600 hover:bg-purple-500 text-white px-8 py-4 rounded-2xl font-black text-lg shadow-lg hidden">START OVERTIME</button>
                 <button id="finishShiftBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-4 rounded-2xl font-bold hidden">FINISH SHIFT</button>
-                <button id="resetShiftBtn" class="bg-red-600/20 text-red-500 border border-red-500/30 hover:bg-red-600 hover:text-white px-4 py-4 rounded-2xl font-bold hidden text-xs uppercase">Reset All</button>
+                <button id="resetShiftBtn" class="bg-red-600/20 text-red-500 border border-red-500/30 hover:bg-red-600 hover:text-white px-4 py-4 rounded-2xl font-bold hidden text-xs uppercase">Reset</button>
             </div>
             <div class="flex items-center gap-6 text-right">
                 <div><p class="text-[10px] text-slate-500 font-black uppercase">Live Duration</p><p id="liveClock" class="text-3xl font-mono font-bold text-blue-400">00:00:00</p></div>
@@ -79,12 +79,13 @@
                         <th class="px-6 py-4">Duration</th>
                         <th class="px-6 py-4">Category</th>
                         <th class="px-6 py-4">Sub-Category</th>
-                        <th class="px-6 py-4">OT</th> <th class="px-6 py-4 text-center">Action</th>
+                        <th class="px-6 py-4">OT</th>
+                        <th class="px-6 py-4 text-center">Action</th>
                     </tr>
                 </thead>
                 <tbody id="logBody" class="text-sm font-medium"></tbody>
             </table>
-            <div id="emptyState" class="p-24 text-center text-slate-600 font-bold italic">No active logs. Click Start Work.</div>
+            <div id="emptyState" class="p-24 text-center text-slate-600 font-bold italic">No active logs.</div>
             
             <div class="p-6 bg-slate-900/80 border-t border-slate-700 flex justify-between items-center">
                 <div class="flex items-center gap-4">
@@ -98,7 +99,7 @@
 
     <div id="settingsModal" class="modal fixed inset-0 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-700 p-8 rounded-[2rem] w-full max-w-2xl shadow-2xl">
-            <h2 class="text-xl font-black mb-6 text-blue-400 uppercase tracking-widest text-center">User Settings</h2>
+            <h2 class="text-xl font-black mb-6 text-blue-400 uppercase tracking-widest text-center">Settings</h2>
             <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700 mb-6 flex justify-between items-center">
                 <div><p class="font-bold text-sm">Auto-Pilot Mode</p></div>
                 <input type="checkbox" id="cfgAutoPilot" class="w-6 h-6 rounded accent-blue-500">
@@ -108,15 +109,15 @@
                 <div><label class="text-[10px] text-slate-500 font-bold uppercase">Shift</label><select id="cfgShift" class="w-full p-3 rounded-xl mt-1"><option>Day</option><option>Night</option></select></div>
             </div>
             <div class="grid grid-cols-5 gap-2 mb-8">
-                <div><label class="text-[9px] text-slate-500 uppercase">Shift In</label><input type="time" id="setIn" class="w-full p-2 text-xs rounded-lg"></div>
-                <div><label class="text-[9px] text-slate-500 uppercase">B1</label><input type="time" id="setB1" class="w-full p-2 text-xs rounded-lg"></div>
-                <div><label class="text-[9px] text-slate-500 uppercase">Lunch</label><input type="time" id="setL" class="w-full p-2 text-xs rounded-lg"></div>
-                <div><label class="text-[9px] text-slate-500 uppercase">B2</label><input type="time" id="setB2" class="w-full p-2 text-xs rounded-lg"></div>
-                <div><label class="text-[9px] text-slate-500 uppercase">Shift Out</label><input type="time" id="setOut" class="w-full p-2 text-xs rounded-lg"></div>
+                <div><label class="text-[9px] text-slate-500">In</label><input type="time" id="setIn" class="w-full p-2 text-xs rounded-lg"></div>
+                <div><label class="text-[9px] text-slate-500">B1</label><input type="time" id="setB1" class="w-full p-2 text-xs rounded-lg"></div>
+                <div><label class="text-[9px] text-slate-500">L</label><input type="time" id="setL" class="w-full p-2 text-xs rounded-lg"></div>
+                <div><label class="text-[9px] text-slate-500">B2</label><input type="time" id="setB2" class="w-full p-2 text-xs rounded-lg"></div>
+                <div><label class="text-[9px] text-slate-500">Out</label><input type="time" id="setOut" class="w-full p-2 text-xs rounded-lg"></div>
             </div>
             <div class="flex gap-4">
                 <button onclick="document.getElementById('settingsModal').classList.add('hidden')" class="w-full bg-slate-700 py-4 rounded-xl font-black">Cancel</button>
-                <button id="saveSettings" class="w-full bg-blue-600 py-4 rounded-xl font-black">Save Changes</button>
+                <button id="saveSettings" class="w-full bg-blue-600 py-4 rounded-xl font-black">Save</button>
             </div>
         </div>
     </div>
@@ -128,19 +129,18 @@
                 <div><label class="text-[10px] font-bold text-slate-500 uppercase">Category</label><select id="modalMainCat" class="w-full p-4 rounded-xl mt-1"></select></div>
                 <div><label class="text-[10px] font-bold text-slate-500 uppercase">Sub-Category</label><select id="modalSubCat" class="w-full p-4 rounded-xl mt-1"></select></div>
             </div>
-            <button id="confirmTask" class="w-full bg-blue-600 px-8 py-4 rounded-xl font-black mt-8">START TASK</button>
+            <button id="confirmTask" class="w-full bg-blue-600 px-8 py-4 rounded-xl font-black mt-8 uppercase">Start Recording</button>
         </div>
     </div>
 
     <div id="historyModal" class="modal fixed inset-0 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-700 p-8 rounded-[2rem] w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl text-sm">
-            <div class="flex justify-between items-center mb-6"><h2 class="text-xl font-black text-blue-400 uppercase">History</h2><button onclick="document.getElementById('historyModal').classList.add('hidden')" class="text-slate-500 text-2xl">✕</button></div>
+            <div class="flex justify-between items-center mb-6"><h2 class="text-xl font-black text-blue-400 uppercase">Shift History</h2><button onclick="document.getElementById('historyModal').classList.add('hidden')" class="text-slate-500 text-2xl">✕</button></div>
             <div id="historyList" class="flex-1 overflow-y-auto space-y-4 pr-2"></div>
         </div>
     </div>
 
     <script>
-        // CONFIG & DATABASE
         const firebaseConfig = { apiKey: "AIzaSyAlFMmWOPmRZg8QCXS9NSORiVIRUFj59LU", authDomain: "tscm-547ea.firebaseapp.com", projectId: "tscm-547ea", storageBucket: "tscm-547ea.firebasestorage.app", messagingSenderId: "898083203071", appId: "1:898083203071:web:b2134307b5ad610dfce9ca" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
@@ -150,7 +150,6 @@
 
         let user = '', logs = [], config = {}, state = "IDLE", timerInterval, shiftFinished = false, isOT = false;
 
-        // UTILITIES
         const t2S = (t) => { if(!t || t === '...') return 0; const p = t.split(':').map(Number); return (p[0]*3600) + (p[1]*60) + (p[2] || 0); };
         const fS = (s, randomize = false) => { 
             const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
@@ -161,7 +160,6 @@
         const calcD = (s,e) => { let d = t2S(e) - t2S(s); if(d < 0) d += 86400; return fS(d); };
         const addRandomSeconds = (timeStr) => `${timeStr}:${String(Math.floor(Math.random() * 50) + 5).padStart(2, '0')}`;
 
-        // CORE RENDER
         function render() {
             const body = document.getElementById('logBody');
             if(logs.length === 0) { body.innerHTML = ''; document.getElementById('emptyState').classList.remove('hidden'); }
@@ -221,7 +219,7 @@
             document.getElementById('resetShiftBtn').classList.remove('hidden');
         }
 
-        // LOGIN / ACTIONS
+        // BUTTON ACTIONS
         document.getElementById('loginSubmit').onclick = async () => {
             user = document.getElementById('loginUsername').value.trim().toLowerCase();
             if(!user) return;
@@ -236,16 +234,15 @@
         };
 
         document.getElementById('mainActionButton').onclick = () => {
-            if (shiftFinished) { if(confirm("New shift?")) { logs = []; shiftFinished = false; isOT = false; saveSession(); } else return; }
+            if (shiftFinished) { if(confirm("Start new shift?")) { logs = []; shiftFinished = false; isOT = false; saveSession(); } else return; }
             if (state === "IDLE" || state === "BREAK") { isOT = false; document.getElementById('taskModalHeader').textContent = "Select Task"; document.getElementById('taskModal').classList.remove('hidden'); }
             else startSegment("BREAK", "BREAK", "BREAK");
         };
 
-        document.getElementById('startOTBtn').onclick = () => { isOT = true; document.getElementById('taskModalHeader').textContent = "OT Task Select"; document.getElementById('taskModal').classList.remove('hidden'); };
+        document.getElementById('startOTBtn').onclick = () => { isOT = true; document.getElementById('taskModalHeader').textContent = "OT Task"; document.getElementById('taskModal').classList.remove('hidden'); };
 
         document.getElementById('confirmTask').onclick = () => {
-            const m = document.getElementById('modalMainCat').value;
-            const s = document.getElementById('modalSubCat').value;
+            const m = document.getElementById('modalMainCat').value, s = document.getElementById('modalSubCat').value;
             startSegment("WORKING", isOT ? `[OT] ${m}` : m, s);
             document.getElementById('taskModal').classList.add('hidden');
             document.getElementById('startOTBtn').classList.add('hidden');
@@ -258,7 +255,7 @@
             if(logs.length > 0 && logs[0].out === "...") { logs[0].out = timeStr; logs[0].dur = calcD(logs[0].in, logs[0].out); }
             shiftFinished = true; state = "IDLE";
             document.getElementById('globalFixBtn').disabled = false;
-            document.getElementById('lockStatus').textContent = "Sync Ready";
+            document.getElementById('lockStatus').textContent = "Ready to Sync";
             document.getElementById('startOTBtn').classList.remove('hidden');
             saveSession(); render(); updateUI();
             await db.collection("work_logs").add({ user, logs, tech: config.tech, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
@@ -272,27 +269,15 @@
             const needed = SHIFT_GOAL - workSec;
             if(needed > 0) { logs[0].out = fS(t2S(logs[0].in) + needed, true); logs[0].dur = calcD(logs[0].in, logs[0].out); }
             for(let i=logs.length-2; i>=0; i--) { logs[i].in = logs[i+1].out; if(logs[i].out !== "...") logs[i].dur = calcD(logs[i].in, logs[i].out); }
-            render(); saveSession(); alert("Auto-Sync Complete.");
+            render(); saveSession(); alert("Sync Done.");
         };
 
-        // COPY & EXPORT
-        document.getElementById('mainCopyBtn').onclick = () => {
-            const txt = logs.map(l => `${config.tech}\t${user}\t${config.shift}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\t${l.main.includes('[OT]')?'YES':'NO'}`).join('\n');
-            navigator.clipboard.writeText(txt); alert("Copied!");
-        };
-
-        function exportToCSV() {
-            let csv = "Tech,User,Shift,In,Out,Dur,Cat,Sub,OT\n";
-            logs.forEach(l => { csv += `${config.tech},${user},${config.shift},${l.in},${l.out},${l.dur},"${l.main}","${l.sub}",${l.main.includes('[OT]')?'YES':'NO'}\n`; });
-            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = `Log_${user}.csv`; a.click();
-        }
-
-        // HELPERS
+        // UI HELPERS
         function updateUI() {
             const btn = document.getElementById('mainActionButton');
             if (shiftFinished) { btn.textContent = "NEW SHIFT"; btn.className = "bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black"; }
             else {
-                btn.textContent = state === "WORKING" ? "GO TO BREAK" : (state === "IDLE" ? "START WORK" : "RESUME WORK");
+                btn.textContent = state === "WORKING" ? "BREAK" : (state === "IDLE" ? "START WORK" : "RESUME");
                 btn.className = state === "WORKING" ? "bg-amber-500 text-white px-8 py-4 rounded-2xl font-black" : "bg-blue-600 text-white px-8 py-4 rounded-2xl font-black";
             }
         }
@@ -339,29 +324,66 @@
             if (v) { logs[i][f] = v; if(logs[i].out !== "...") logs[i].dur = calcD(logs[i].in, logs[i].out); render(); saveSession(); }
         };
 
+        // HISTORY & DELETE ENGINE
+        document.getElementById('historyBtn').onclick = loadHistory;
+
+        async function loadHistory() {
+            const list = document.getElementById('historyList');
+            list.innerHTML = 'Loading records...';
+            document.getElementById('historyModal').classList.remove('hidden');
+            const snap = await db.collection("work_logs").where("user", "==", user).orderBy("timestamp", "desc").limit(15).get();
+            list.innerHTML = snap.empty ? 'No records.' : '';
+            snap.forEach(doc => {
+                const d = doc.data();
+                const div = document.createElement('div');
+                div.className = "bg-slate-800 p-4 rounded-xl flex justify-between items-center mb-2 border border-slate-700";
+                div.innerHTML = `
+                    <div>
+                        <p class="font-black text-blue-400">${d.timestamp ? d.timestamp.toDate().toLocaleDateString() : 'N/A'}</p>
+                        <p class="text-[10px] text-slate-500">${d.logs.length} Entries • Tech ${d.tech || '?'}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="copyHistory('${doc.id}')" class="bg-blue-600 px-4 py-2 rounded-lg text-xs font-bold">COPY</button>
+                        <button onclick="deleteHistory('${doc.id}')" class="bg-red-600/20 text-red-500 border border-red-500/30 px-3 py-2 rounded-lg text-xs hover:bg-red-600 hover:text-white">🗑️</button>
+                    </div>`;
+                list.append(div);
+                div.dataset.logData = JSON.stringify(d.logs);
+            });
+        }
+
+        window.copyHistory = (id) => {
+            const btn = event.target;
+            const logsToCopy = JSON.parse(btn.closest('div.bg-slate-800').dataset.logData);
+            const txt = logsToCopy.map(l => `${config.tech}\t${user}\t${config.shift}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\t${l.main.includes('[OT]')?'YES':'NO'}`).join('\n');
+            navigator.clipboard.writeText(txt);
+            const oldText = btn.textContent; btn.textContent = "COPIED!";
+            setTimeout(() => btn.textContent = oldText, 2000);
+        };
+
+        window.deleteHistory = async (id) => {
+            if(!confirm("PERMANENTLY DELETE this shift record?")) return;
+            await db.collection("work_logs").doc(id).delete();
+            loadHistory();
+        };
+
+        // EXPORTS & SETTINGS
+        document.getElementById('mainCopyBtn').onclick = () => {
+            const txt = logs.map(l => `${config.tech}\t${user}\t${config.shift}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\t${l.main.includes('[OT]')?'YES':'NO'}`).join('\n');
+            navigator.clipboard.writeText(txt); alert("Copied!");
+        };
+
+        function exportToCSV() {
+            let csv = "Tech,User,Shift,In,Out,Dur,Cat,Sub,OT\n";
+            logs.forEach(l => { csv += `${config.tech},${user},${config.shift},${l.in},${l.out},${l.dur},"${l.main}","${l.sub}",${l.main.includes('[OT]')?'YES':'NO'}\n`; });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = `Report_${user}.csv`; a.click();
+        }
+
         document.getElementById('saveSettings').onclick = async () => {
             config = { tech: document.getElementById('cfgTech').value, shift: document.getElementById('cfgShift').value, in: document.getElementById('setIn').value, b1: document.getElementById('setB1').value, l: document.getElementById('setL').value, b2: document.getElementById('setB2').value, out: document.getElementById('setOut').value, autoPilot: document.getElementById('cfgAutoPilot').checked };
             await db.collection("settings").doc(user).set(config);
             document.getElementById('autoPilotBadge').classList.toggle('hidden', !config.autoPilot);
             document.getElementById('settingsModal').classList.add('hidden');
             document.getElementById('techDisp').textContent = config.tech;
-        };
-
-        document.getElementById('historyBtn').onclick = async () => {
-            const list = document.getElementById('historyList');
-            list.innerHTML = 'Loading...';
-            document.getElementById('historyModal').classList.remove('hidden');
-            const snap = await db.collection("work_logs").where("user", "==", user).orderBy("timestamp", "desc").limit(10).get();
-            list.innerHTML = snap.empty ? 'No records.' : '';
-            snap.forEach(doc => {
-                const d = doc.data();
-                const div = document.createElement('div');
-                div.className = "bg-slate-800 p-4 rounded-xl flex justify-between items-center mb-2";
-                div.innerHTML = `<div><p class="font-black text-blue-400">${d.timestamp ? d.timestamp.toDate().toLocaleDateString() : 'N/A'}</p><p class="text-[10px] text-slate-500">${d.logs.length} Entries</p></div>`;
-                const cBtn = document.createElement('button'); cBtn.className = "bg-blue-600 px-4 py-2 rounded-lg text-xs font-bold"; cBtn.textContent = "COPY";
-                cBtn.onclick = () => { navigator.clipboard.writeText(d.logs.map(l => `${config.tech}\t${user}\t${config.shift}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\t${l.main.includes('[OT]')?'YES':'NO'}`).join('\n')); alert("Copied!"); };
-                div.append(cBtn); list.append(div);
-            });
         };
 
         document.getElementById('settingsBtn').onclick = () => { document.getElementById('settingsModal').classList.remove('hidden'); };
@@ -371,7 +393,7 @@
             m.onchange = () => s.innerHTML = categoryData[m.value].map(v => `<option value="${v}">${v}</option>`).join('');
             m.onchange();
         }
-        document.getElementById('resetShiftBtn').onclick = () => { if(confirm("Reset?")) { logs=[]; state="IDLE"; shiftFinished=false; saveSession(); render(); updateUI(); } };
+        document.getElementById('resetShiftBtn').onclick = () => { if(confirm("Reset current shift?")) { logs=[]; state="IDLE"; shiftFinished=false; saveSession(); render(); updateUI(); } };
     </script>
 </body>
 </html>
