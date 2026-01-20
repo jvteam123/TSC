@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Task Logger PRO | v3.2 Final Release</title>
+    <title>Task Logger PRO | v3.2 Production Final</title>
     <script src="https://cdn.tailwindcss.com/3.4.3"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -16,18 +16,19 @@
         .active-row { background-color: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; }
         input, select { background-color: #0f172a !important; border: 1px solid #334155 !important; color: white !important; }
         .progress-container { height: 10px; background: #334155; border-radius: 5px; overflow: hidden; }
-        #progressBar { height: 100%; width: 0%; transition: width 0.5s ease, background-color 0.5s ease; }
+        #progressBar { height: 100%; width: 0%; transition: width 0.5s ease; }
         .pilot-active { animation: pulse 2s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+        .time-cell:hover { cursor: pointer; text-decoration: underline; color: #60a5fa; }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
     <div id="loginModal" class="modal fixed inset-0 flex items-center justify-center p-4">
         <div class="bg-slate-900 w-full max-w-[320px] rounded-2xl border border-slate-700 p-6 text-center shadow-2xl">
-            <h2 class="text-lg font-black mb-4 uppercase tracking-widest text-blue-500">User Login</h2>
+            <h2 class="text-lg font-black mb-4 uppercase tracking-widest text-blue-500">User Access</h2>
             <input type="text" id="loginUsername" placeholder="Username" class="w-full p-3 rounded-xl mb-4 text-center font-bold text-sm">
-            <button id="loginSubmit" class="w-full bg-blue-600 py-3 rounded-xl font-black text-sm hover:bg-blue-500 transition-all">ACCESS</button>
+            <button id="loginSubmit" class="w-full bg-blue-600 py-3 rounded-xl font-black text-sm hover:bg-blue-500 transition-all">SIGN IN</button>
         </div>
     </div>
 
@@ -37,11 +38,11 @@
                 <h1 class="text-2xl font-black text-white italic tracking-tighter">TASK LOGGER <span class="text-blue-500">PRO</span></h1>
                 <div class="flex items-center gap-2">
                     <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">User: <span id="userDisp" class="text-blue-400">...</span> | Tech: <span id="techDisp" class="text-blue-400">...</span></p>
-                    <span id="autoPilotBadge" class="hidden text-[9px] bg-indigo-600 text-white px-2 py-0.5 rounded-full font-black pilot-active uppercase">Auto-Pilot Active</span>
+                    <span id="autoPilotBadge" class="hidden text-[9px] bg-indigo-600 text-white px-2 py-0.5 rounded-full font-black pilot-active uppercase">Auto-Pilot ON</span>
                 </div>
             </div>
             <div class="flex gap-2">
-                <button onclick="exportToCSV()" class="bg-emerald-600/20 text-emerald-500 border border-emerald-500/30 px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-600 transition-all">📥 CSV</button>
+                <button onclick="exportToCSV()" class="bg-emerald-600/20 text-emerald-500 border border-emerald-500/30 px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-600 hover:text-white transition-all">📥 EXPORT CSV</button>
                 <button id="historyBtn" class="bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 hover:bg-slate-700 text-xs font-bold">📜 HISTORY</button>
                 <button id="settingsBtn" class="bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 hover:bg-slate-700 text-xs font-bold">⚙️ SETTINGS</button>
             </div>
@@ -49,7 +50,7 @@
 
         <div class="mb-6">
             <div class="flex justify-between text-[10px] font-black uppercase text-slate-500 mb-1">
-                <span>Shift Goal (07:30)</span>
+                <span>Shift Goal (07:30:00 Work Time)</span>
                 <span id="progressPercent">0%</span>
             </div>
             <div class="progress-container"><div id="progressBar" class="bg-blue-500"></div></div>
@@ -60,11 +61,11 @@
                 <button id="mainActionButton" class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl font-black text-lg shadow-lg">START WORK</button>
                 <button id="startOTBtn" class="bg-purple-600 hover:bg-purple-500 text-white px-8 py-4 rounded-2xl font-black text-lg shadow-lg hidden">START OVERTIME</button>
                 <button id="finishShiftBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-4 rounded-2xl font-bold hidden">FINISH SHIFT</button>
-                <button id="resetShiftBtn" class="bg-red-600/20 text-red-500 border border-red-500/30 hover:bg-red-600 hover:text-white px-4 py-4 rounded-2xl font-bold hidden text-xs">RESET</button>
+                <button id="resetShiftBtn" class="bg-red-600/20 text-red-500 border border-red-500/30 hover:bg-red-600 hover:text-white px-4 py-4 rounded-2xl font-bold hidden text-xs uppercase">Reset All</button>
             </div>
             <div class="flex items-center gap-6 text-right">
-                <div><p class="text-[10px] text-slate-500 font-black uppercase">Live Task</p><p id="liveClock" class="text-3xl font-mono font-bold text-blue-400">00:00:00</p></div>
-                <div class="border-l border-slate-700 pl-6"><p class="text-[10px] text-slate-500 font-black uppercase">Total Work</p><p id="totalWorkTime" class="text-xl font-mono font-bold text-emerald-400">00:00:00</p></div>
+                <div><p class="text-[10px] text-slate-500 font-black uppercase tracking-widest">Live Duration</p><p id="liveClock" class="text-3xl font-mono font-bold text-blue-400">00:00:00</p></div>
+                <div class="border-l border-slate-700 pl-6"><p class="text-[10px] text-slate-500 font-black uppercase tracking-widest">Shift Work Total</p><p id="totalWorkTime" class="text-xl font-mono font-bold text-emerald-400">00:00:00</p></div>
             </div>
         </div>
 
@@ -79,12 +80,12 @@
                 </thead>
                 <tbody id="logBody" class="text-sm font-medium"></tbody>
             </table>
-            <div id="emptyState" class="p-24 text-center text-slate-600 font-bold italic">No active logs.</div>
+            <div id="emptyState" class="p-24 text-center text-slate-600 font-bold italic">Ready to log. Click Start Work to begin your shift.</div>
             
             <div class="p-6 bg-slate-900/80 border-t border-slate-700 flex justify-between items-center">
                 <div class="flex items-center gap-4">
-                    <button id="globalFixBtn" disabled class="bg-indigo-600 text-white px-6 py-3 rounded-xl font-black text-sm hover:bg-indigo-500 transition-all">✅ AUTO-SYNC (07:30)</button>
-                    <span id="lockStatus" class="text-[10px] font-bold text-slate-500 uppercase">Finish Shift first</span>
+                    <button id="globalFixBtn" disabled class="bg-indigo-600 text-white px-6 py-3 rounded-xl font-black text-sm hover:bg-indigo-500 transition-all shadow-lg">✅ AUTO-SYNC (07:30)</button>
+                    <span id="lockStatus" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Finish Shift first</span>
                 </div>
                 <button id="mainCopyBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-12 py-4 rounded-2xl font-black text-lg">COPY OUTPUT</button>
             </div>
@@ -93,9 +94,9 @@
 
     <div id="settingsModal" class="modal fixed inset-0 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-700 p-8 rounded-[2rem] w-full max-w-2xl shadow-2xl">
-            <h2 class="text-xl font-black mb-6 text-blue-400 uppercase tracking-widest text-center">Settings</h2>
+            <h2 class="text-xl font-black mb-6 text-blue-400 uppercase tracking-widest text-center">User Settings</h2>
             <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700 mb-6 flex justify-between items-center">
-                <div><p class="font-bold text-sm">Auto-Pilot Mode</p></div>
+                <div><p class="font-bold text-sm">Auto-Pilot Mode</p><p class="text-[10px] text-slate-500 uppercase">Automation based on times below</p></div>
                 <input type="checkbox" id="cfgAutoPilot" class="w-6 h-6 rounded accent-blue-500">
             </div>
             <div class="grid grid-cols-2 gap-4 mb-6">
@@ -103,11 +104,11 @@
                 <div><label class="text-[10px] text-slate-500 font-bold uppercase">Shift</label><select id="cfgShift" class="w-full p-3 rounded-xl mt-1"><option>Day</option><option>Night</option></select></div>
             </div>
             <div class="grid grid-cols-5 gap-2 mb-8">
-                <div><label class="text-[9px] text-slate-500">IN</label><input type="time" id="setIn" class="w-full p-2 text-xs rounded-lg"></div>
-                <div><label class="text-[9px] text-slate-500">B1</label><input type="time" id="setB1" class="w-full p-2 text-xs rounded-lg"></div>
-                <div><label class="text-[9px] text-slate-500">LUNCH</label><input type="time" id="setL" class="w-full p-2 text-xs rounded-lg"></div>
-                <div><label class="text-[9px] text-slate-500">B2</label><input type="time" id="setB2" class="w-full p-2 text-xs rounded-lg"></div>
-                <div><label class="text-[9px] text-slate-500">OUT</label><input type="time" id="setOut" class="w-full p-2 text-xs rounded-lg"></div>
+                <div><label class="text-[9px] text-slate-500 uppercase">Shift In</label><input type="time" id="setIn" class="w-full p-2 text-xs rounded-lg"></div>
+                <div><label class="text-[9px] text-slate-500 uppercase">Break 1</label><input type="time" id="setB1" class="w-full p-2 text-xs rounded-lg"></div>
+                <div><label class="text-[9px] text-slate-500 uppercase">Lunch</label><input type="time" id="setL" class="w-full p-2 text-xs rounded-lg"></div>
+                <div><label class="text-[9px] text-slate-500 uppercase">Break 2</label><input type="time" id="setB2" class="w-full p-2 text-xs rounded-lg"></div>
+                <div><label class="text-[9px] text-slate-500 uppercase">Shift Out</label><input type="time" id="setOut" class="w-full p-2 text-xs rounded-lg"></div>
             </div>
             <div class="flex gap-4">
                 <button onclick="document.getElementById('settingsModal').classList.add('hidden')" class="w-full bg-slate-700 py-4 rounded-xl font-black">Cancel</button>
@@ -120,10 +121,10 @@
         <div class="bg-slate-900 border border-slate-700 p-8 rounded-3xl w-full max-w-md shadow-2xl">
             <h2 id="taskModalHeader" class="text-lg font-black mb-6 uppercase text-blue-400">Select Task</h2>
             <div class="space-y-4">
-                <div><label class="text-[10px] font-bold text-slate-500 uppercase">Category</label><select id="modalMainCat" class="w-full p-4 rounded-xl mt-1"></select></div>
-                <div><label class="text-[10px] font-bold text-slate-500 uppercase">Sub-Category</label><select id="modalSubCat" class="w-full p-4 rounded-xl mt-1"></select></div>
+                <div><label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Category</label><select id="modalMainCat" class="w-full p-4 rounded-xl mt-1"></select></div>
+                <div><label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Sub-Category</label><select id="modalSubCat" class="w-full p-4 rounded-xl mt-1"></select></div>
             </div>
-            <button id="confirmTask" class="w-full bg-blue-600 px-8 py-4 rounded-xl font-black mt-8">START RECORDING</button>
+            <button id="confirmTask" class="w-full bg-blue-600 px-8 py-4 rounded-xl font-black mt-8">START TASK</button>
         </div>
     </div>
 
@@ -135,15 +136,17 @@
     </div>
 
     <script>
+        // FIREBASE SETUP
         const firebaseConfig = { apiKey: "AIzaSyAlFMmWOPmRZg8QCXS9NSORiVIRUFj59LU", authDomain: "tscm-547ea.firebaseapp.com", projectId: "tscm-547ea", storageBucket: "tscm-547ea.firebasestorage.app", messagingSenderId: "898083203071", appId: "1:898083203071:web:b2134307b5ad610dfce9ca" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
         const categoryData = { "SARANAC": ["CF"], "ACCUPLUS": ["DEM", "I3", "PCS", "REFIX", "i3QA", "RQA"], "DOWNTIME": ["NoProject"], "TRAINING": ["Formal - Accuplus"] };
-        const SHIFT_GOAL = 27000; 
+        const SHIFT_GOAL = 27000; // 7.5 hours
 
         let user = '', logs = [], config = {}, state = "IDLE", timerInterval, shiftFinished = false, isOT = false;
 
+        // HELPER FUNCTIONS
         const t2S = (t) => { if(!t || t === '...') return 0; const p = t.split(':').map(Number); return (p[0]*3600) + (p[1]*60) + (p[2] || 0); };
         const fS = (s, randomize = false) => { 
             const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
@@ -160,18 +163,18 @@
             else {
                 document.getElementById('emptyState').classList.add('hidden');
                 body.innerHTML = logs.map((l, i) => {
-                    const otDisplay = l.main.includes('[OT]') ? '<span class="text-purple-400 font-black">YES</span>' : '<span class="text-slate-500">NO</span>';
+                    const isOTEntry = l.main.includes('[OT]');
                     return `
                     <tr class="${i === 0 && state !== 'IDLE' ? 'active-row' : ''}">
                         <td class="px-6 py-4 font-bold text-slate-500">${l.tech}</td>
                         <td class="px-6 py-4 text-blue-400 font-bold time-cell" onclick="mEdit(${i},'in')">${l.in}</td>
                         <td class="px-6 py-4 text-blue-400 font-bold time-cell" onclick="mEdit(${i},'out')">${l.out}</td>
                         <td class="px-6 py-4 font-black">${l.dur}</td>
-                        <td class="px-6 py-4 font-black">${otDisplay}</td>
+                        <td class="px-6 py-4 font-black">${isOTEntry ? '<span class="text-purple-400">YES</span>' : '<span class="text-slate-600">NO</span>'}</td>
                         <td class="px-6 py-4 font-black text-blue-500">${l.main}</td>
                         <td class="px-6 py-4 text-xs text-slate-400 font-bold">${l.sub}</td>
                         <td class="px-6 py-4 text-center flex justify-center gap-2">
-                            <button onclick="rowFix(${i})" class="text-emerald-500">✅</button>
+                            <button onclick="rowFix(${i})" title="Snap to Schedule">✅</button>
                             <button onclick="if(confirm('Delete?')){logs.splice(${i},1); saveSession(); render();}" class="text-red-500">✖</button>
                         </td>
                     </tr>`;
@@ -194,25 +197,26 @@
         function checkAutoPilot() {
             if (!config.autoPilot || shiftFinished) return;
             const now = new Date();
-            const currentHM = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-            if (state === "IDLE" && currentHM === config.in) startNewSegment("WORKING", "SARANAC", "CF");
-            const breakTimes = [config.b1, config.l, config.b2];
-            if (state === "WORKING" && breakTimes.includes(currentHM)) startNewSegment("BREAK", "BREAK", "BREAK");
-            if (state === "BREAK" && logs.length > 0 && Math.floor((now - logs[0].rawStart)/1000) >= 60) startNewSegment("WORKING", "SARANAC", "CF");
-            if (state !== "IDLE" && currentHM === config.out) document.getElementById('finishShiftBtn').click();
+            const curHM = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+            if (state === "IDLE" && curHM === config.in) startSegment("WORKING", "SARANAC", "CF");
+            const breaks = [config.b1, config.l, config.b2];
+            if (state === "WORKING" && breaks.includes(curHM)) startSegment("BREAK", "BREAK", "BREAK");
+            if (state === "BREAK" && logs.length > 0 && (now - logs[0].rawStart) > 60000) startSegment("WORKING", "SARANAC", "CF");
+            if (state !== "IDLE" && curHM === config.out) document.getElementById('finishShiftBtn').click();
         }
 
-        function startNewSegment(newState, main, sub) {
+        function startSegment(newState, main, sub) {
             const now = new Date();
             const timeStr = fS((now.getHours() * 3600) + (now.getMinutes() * 60), true);
             if (logs.length > 0 && logs[0].out === "...") { logs[0].out = timeStr; logs[0].dur = calcD(logs[0].in, logs[0].out); }
             state = newState;
-            logs.unshift({ tech: config.tech, user: user, in: timeStr, out: "...", dur: "00:00:00", main: main, sub: sub, rawStart: now });
+            logs.unshift({ tech: config.tech, in: timeStr, out: "...", dur: "00:00:00", main: main, sub: sub, rawStart: now });
             saveSession(); updateUI(); startTimer(); render();
             document.getElementById('finishShiftBtn').classList.remove('hidden');
             document.getElementById('resetShiftBtn').classList.remove('hidden');
         }
 
+        // ACTIONS
         document.getElementById('loginSubmit').onclick = async () => {
             user = document.getElementById('loginUsername').value.trim().toLowerCase();
             if(!user) return;
@@ -221,20 +225,23 @@
             document.getElementById('mainApp').classList.remove('hidden');
             const snap = await db.collection("settings").doc(user).get();
             config = snap.exists ? snap.data() : { tech: '0000', shift: 'Day', in: "06:00", b1: "08:30", l: "11:00", b2: "13:30", out: "15:00", autoPilot: false };
+            document.getElementById('techDisp').textContent = config.tech;
             document.getElementById('autoPilotBadge').classList.toggle('hidden', !config.autoPilot);
             initTaskModal(); loadSession();
         };
 
         document.getElementById('mainActionButton').onclick = () => {
-            if (shiftFinished) { if(confirm("New shift?")) { logs = []; shiftFinished = false; isOT = false; saveSession(); } else return; }
+            if (shiftFinished) { if(confirm("Start new shift?")) { logs = []; shiftFinished = false; isOT = false; saveSession(); } else return; }
             if (state === "IDLE" || state === "BREAK") { isOT = false; document.getElementById('taskModalHeader').textContent = "Select Task"; document.getElementById('taskModal').classList.remove('hidden'); }
-            else startNewSegment("BREAK", "BREAK", "BREAK");
+            else startSegment("BREAK", "BREAK", "BREAK");
         };
 
         document.getElementById('startOTBtn').onclick = () => { isOT = true; document.getElementById('taskModalHeader').textContent = "Select OT Task"; document.getElementById('taskModal').classList.remove('hidden'); };
 
         document.getElementById('confirmTask').onclick = () => {
-            startNewSegment("WORKING", isOT ? `[OT] ${document.getElementById('modalMainCat').value}` : document.getElementById('modalMainCat').value, document.getElementById('modalSubCat').value);
+            const m = document.getElementById('modalMainCat').value;
+            const s = document.getElementById('modalSubCat').value;
+            startSegment("WORKING", isOT ? `[OT] ${m}` : m, s);
             document.getElementById('taskModal').classList.add('hidden');
             document.getElementById('startOTBtn').classList.add('hidden');
         };
@@ -246,7 +253,7 @@
             if(logs.length > 0 && logs[0].out === "...") { logs[0].out = timeStr; logs[0].dur = calcD(logs[0].in, logs[0].out); }
             shiftFinished = true; state = "IDLE";
             document.getElementById('globalFixBtn').disabled = false;
-            document.getElementById('lockStatus').textContent = "Sync Ready";
+            document.getElementById('lockStatus').textContent = "Ready to Sync";
             document.getElementById('startOTBtn').classList.remove('hidden');
             saveSession(); render(); updateUI();
             await db.collection("work_logs").add({ user, logs, tech: config.tech, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
@@ -260,16 +267,18 @@
             const needed = SHIFT_GOAL - workSec;
             if(needed > 0) { logs[0].out = fS(t2S(logs[0].in) + needed, true); logs[0].dur = calcD(logs[0].in, logs[0].out); }
             for(let i=logs.length-2; i>=0; i--) { logs[i].in = logs[i+1].out; if(logs[i].out !== "...") logs[i].dur = calcD(logs[i].in, logs[i].out); }
-            render(); saveSession(); alert("Sync Done.");
+            render(); saveSession(); alert("Auto-Sync Complete.");
         };
 
-        document.getElementById('saveSettings').onclick = async () => {
-            config = { tech: document.getElementById('cfgTech').value, shift: document.getElementById('cfgShift').value, in: document.getElementById('setIn').value, b1: document.getElementById('setB1').value, l: document.getElementById('setL').value, b2: document.getElementById('setB2').value, out: document.getElementById('setOut').value, autoPilot: document.getElementById('cfgAutoPilot').checked };
-            await db.collection("settings").doc(user).set(config);
-            document.getElementById('autoPilotBadge').classList.toggle('hidden', !config.autoPilot);
-            document.getElementById('settingsModal').classList.add('hidden');
-        };
-
+        // UI SYSTEM
+        function updateUI() {
+            const btn = document.getElementById('mainActionButton');
+            if (shiftFinished) { btn.textContent = "NEW SHIFT"; btn.className = "bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black"; }
+            else {
+                btn.textContent = state === "WORKING" ? "GO TO BREAK" : (state === "IDLE" ? "START WORK" : "RESUME WORK");
+                btn.className = state === "WORKING" ? "bg-amber-500 text-white px-8 py-4 rounded-2xl font-black" : "bg-blue-600 text-white px-8 py-4 rounded-2xl font-black";
+            }
+        }
         function startTimer() {
             clearInterval(timerInterval);
             timerInterval = setInterval(() => {
@@ -282,16 +291,6 @@
                 updateTotal();
             }, 1000);
         }
-
-        function updateUI() {
-            const btn = document.getElementById('mainActionButton');
-            if (shiftFinished) { btn.textContent = "NEW SHIFT"; btn.className = "bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black"; }
-            else {
-                btn.textContent = state === "WORKING" ? "GO TO BREAK" : (state === "IDLE" ? "START WORK" : "RESUME WORK");
-                btn.className = state === "WORKING" ? "bg-amber-500 text-white px-8 py-4 rounded-2xl font-black" : "bg-blue-600 text-white px-8 py-4 rounded-2xl font-black";
-            }
-        }
-
         function saveSession() { if(user) { localStorage.setItem(`logs_${user}`, JSON.stringify(logs)); localStorage.setItem(`state_${user}`, state); localStorage.setItem(`finished_${user}`, shiftFinished); } }
         function loadSession() {
             const sLogs = localStorage.getItem(`logs_${user}`);
@@ -324,41 +323,60 @@
         };
 
         document.getElementById('mainCopyBtn').onclick = () => {
-            const txt = logs.map(l => `${l.tech}\t${user}\t${config.shift}\t${l.in}\t${l.out}\t${l.dur}\t${l.main.includes('[OT]') ? 'YES' : 'NO'}\t${l.main}\t${l.sub}`).join('\n');
-            navigator.clipboard.writeText(txt); alert("Copied!");
+            const txt = logs.map(l => `${config.tech}\t${user}\t${config.shift}\t${l.in}\t${l.out}\t${l.dur}\t${l.main.includes('[OT]')?'YES':'NO'}\t${l.main}\t${l.sub}`).join('\n');
+            navigator.clipboard.writeText(txt); alert("Copied for Spreadsheet!");
+        };
+
+        document.getElementById('saveSettings').onclick = async () => {
+            config = { tech: document.getElementById('cfgTech').value, shift: document.getElementById('cfgShift').value, in: document.getElementById('setIn').value, b1: document.getElementById('setB1').value, l: document.getElementById('setL').value, b2: document.getElementById('setB2').value, out: document.getElementById('setOut').value, autoPilot: document.getElementById('cfgAutoPilot').checked };
+            await db.collection("settings").doc(user).set(config);
+            document.getElementById('autoPilotBadge').classList.toggle('hidden', !config.autoPilot);
+            document.getElementById('settingsModal').classList.add('hidden');
+            document.getElementById('techDisp').textContent = config.tech;
         };
 
         document.getElementById('historyBtn').onclick = async () => {
             const list = document.getElementById('historyList');
-            list.innerHTML = '<p class="text-center p-8">Loading...</p>';
+            list.innerHTML = '<p class="text-center p-8">Loading history...</p>';
             document.getElementById('historyModal').classList.remove('hidden');
             const snap = await db.collection("work_logs").where("user", "==", user).orderBy("timestamp", "desc").limit(10).get();
-            list.innerHTML = snap.empty ? '<p class="text-center p-8">Empty.</p>' : '';
+            list.innerHTML = snap.empty ? '<p class="text-center p-8 text-slate-500 font-bold">No historical data found.</p>' : '';
             snap.forEach(doc => {
                 const d = doc.data();
                 const div = document.createElement('div');
-                div.className = "history-card p-4 rounded-xl flex justify-between items-center mb-2";
+                div.className = "bg-slate-800 p-4 rounded-xl flex justify-between items-center mb-2 border border-slate-700";
                 div.innerHTML = `<div><p class="font-black text-blue-400">${d.timestamp ? d.timestamp.toDate().toLocaleDateString() : 'N/A'}</p><p class="text-[10px] text-slate-500">${d.logs.length} Entries</p></div>`;
-                const btnGrp = document.createElement('div'); btnGrp.className = "flex gap-2";
                 const cBtn = document.createElement('button'); cBtn.className = "bg-blue-600 px-4 py-2 rounded-lg text-xs font-bold"; cBtn.textContent = "COPY";
-                cBtn.onclick = () => { navigator.clipboard.writeText(d.logs.map(l => `${l.tech}\t${user}\t${config.shift}\t${l.in}\t${l.out}\t${l.dur}\t${l.main.includes('[OT]') ? 'YES' : 'NO'}\t${l.main}\t${l.sub}`).join('\n')); alert("Copied!"); };
-                btnGrp.append(cBtn); div.append(btnGrp); list.append(div);
+                cBtn.onclick = () => { navigator.clipboard.writeText(d.logs.map(l => `${config.tech}\t${user}\t${config.shift}\t${l.in}\t${l.out}\t${l.dur}\t${l.main.includes('[OT]')?'YES':'NO'}\t${l.main}\t${l.sub}`).join('\n')); alert("Copied!"); };
+                div.append(cBtn); list.append(div);
             });
         };
 
-        document.getElementById('settingsBtn').onclick = () => { document.getElementById('settingsModal').classList.remove('hidden'); };
+        document.getElementById('settingsBtn').onclick = () => {
+            document.getElementById('cfgTech').value = config.tech;
+            document.getElementById('setIn').value = config.in;
+            document.getElementById('setB1').value = config.b1;
+            document.getElementById('setL').value = config.l;
+            document.getElementById('setB2').value = config.b2;
+            document.getElementById('setOut').value = config.out;
+            document.getElementById('cfgAutoPilot').checked = config.autoPilot;
+            document.getElementById('settingsModal').classList.remove('hidden');
+        };
+
         function initTaskModal() {
             const m = document.getElementById('modalMainCat'), s = document.getElementById('modalSubCat');
             m.innerHTML = Object.keys(categoryData).map(k => `<option value="${k}">${k}</option>`).join('');
             m.onchange = () => s.innerHTML = categoryData[m.value].map(v => `<option value="${v}">${v}</option>`).join('');
             m.onchange();
         }
+
         function exportToCSV() {
             let csv = "Tech,User,In,Out,Dur,OT,Cat,Sub\n";
-            logs.forEach(l => { csv += `${l.tech},${user},${l.in},${l.out},${l.dur},${l.main.includes('[OT]')?'YES':'NO'},"${l.main}","${l.sub}"\n`; });
-            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = `Log_${user}.csv`; a.click();
+            logs.forEach(l => { csv += `${config.tech},${user},${l.in},${l.out},${l.dur},${l.main.includes('[OT]')?'YES':'NO'},"${l.main}","${l.sub}"\n`; });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = `ShiftReport_${user}.csv`; a.click();
         }
-        document.getElementById('resetShiftBtn').onclick = () => { if(confirm("Reset?")) { logs=[]; state="IDLE"; shiftFinished=false; saveSession(); render(); updateUI(); } };
+
+        document.getElementById('resetShiftBtn').onclick = () => { if(confirm("Clear current logs?")) { logs=[]; state="IDLE"; shiftFinished=false; saveSession(); render(); updateUI(); } };
     </script>
 </body>
 </html>
