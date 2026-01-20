@@ -256,11 +256,34 @@
         };
 
         window.rowFix = (i) => {
-            if(i === logs.length - 1) logs[i].in = config.in;
-            else logs[i].in = logs[i+1].out;
-            if(logs[i].out !== "...") logs[i].dur = calcD(logs[i].in, logs[i].out);
-            render(); saveSession();
-        };
+    const log = logs[i];
+    
+    // NEW: If it's a break, try to match it to Settings first
+    if (log.main === "BREAK") {
+        const totalBreaks = logs.filter(l => l.main === "BREAK").length;
+        // Logic to determine which break setting to use
+        // Usually, the first break created (bottom of list) is B1
+        const breakIndex = logs.filter((l, idx) => l.main === "BREAK" && idx >= i).length;
+        
+        if (breakIndex === 1) log.in = config.b1;
+        else if (breakIndex === 2) log.in = config.l;
+        else if (breakIndex === 3) log.in = config.b2;
+    } else {
+        // Standard Work: Snap to the previous row's OUT time
+        if (i === logs.length - 1) {
+            log.in = config.in; // First entry of the day
+        } else {
+            log.in = logs[i + 1].out;
+        }
+    }
+    
+    // Recalculate duration
+    if (log.out !== "...") {
+        log.dur = calcD(log.in, log.out);
+    }
+    render();
+    saveSession();
+};
 
         function render() {
             const body = document.getElementById('logBody');
