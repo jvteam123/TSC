@@ -75,7 +75,9 @@
                 <tbody id="logBody" class="text-sm font-medium"></tbody>
             </table>
             <div id="emptyState" class="p-24 text-center text-slate-600 font-bold italic">No active logs.</div>
-            <div class="p-6 bg-slate-900/80 border-t border-slate-700 flex justify-end">
+            
+            <div class="p-6 bg-slate-900/80 border-t border-slate-700 flex justify-between items-center">
+                <button id="autofixBtn" class="bg-amber-600/20 text-amber-500 border border-amber-500/30 px-6 py-3 rounded-xl font-bold text-sm hover:bg-amber-600/30">🪄 AUTOFIX (07:30)</button>
                 <button id="mainCopyBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-12 py-4 rounded-2xl font-black text-lg">COPY OUTPUT</button>
             </div>
         </div>
@@ -133,9 +135,26 @@
         const db = firebase.firestore();
 
         const categoryData = { "SARANAC": ["CF"], "ACCUPLUS": ["DEM", "I3", "PCS", "REFIX", "i3QA", "RQA"], "DOWNTIME": ["NoProject"], "TRAINING": ["Formal - Accuplus"] };
-        let user = '', logs = [], config = {}, state = "IDLE", timerInterval;
+        let user = '', logs = [], config = {}, state = "IDLE", timerInterval, monitorInterval;
 
         const getDashDate = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+        // Persistence Functions
+        function saveSession() {
+            localStorage.setItem(`activeLogs_${user}`, JSON.stringify(logs));
+            localStorage.setItem(`activeState_${user}`, state);
+        }
+
+        function loadSession() {
+            const sLogs = localStorage.getItem(`activeLogs_${user}`);
+            const sState = localStorage.getItem(`activeState_${user}`);
+            if (sLogs) {
+                logs = JSON.parse(sLogs);
+                logs.forEach(l => { if(l.rawStart) l.rawStart = new Date(l.rawStart); });
+            }
+            if (sState) state = sState;
+            if (state !== "IDLE") { startTimer(); updateUI(); document.getElementById('finishShiftBtn').classList.remove('hidden'); }
+        }
 
         document.getElementById('loginSubmit').onclick = async () => {
             user = document.getElementById('loginUsername').value.trim().toLowerCase();
@@ -146,63 +165,36 @@
             await loadApp();
         };
 
-        // 1. Updated loadApp to start a live monitor instead of pre-filling
-async function loadApp() {
-    try {
-        const snapshot = await db.collection("settings").doc(user).get();
-        config = snapshot.exists ? snapshot.data() : { tech: '7236', shift: 'Day', in: "06:00", b1: "08:30", l: "11:00", b2: "13:30", out: "15:00", autoWork: false };
-        document.getElementById('techDisp').textContent = config.tech;
-        initTaskModal();
-        
-        if(config.autoWork) {
-            // Check every 30 seconds if it's time to trigger an auto-event
-            setInterval(checkAutoTimeTrigger, 30000); 
-            checkAutoTimeTrigger(); // Run once immediately on login
-        } else {
-            render();
+        async function loadApp() {
+            try {
+                const snapshot = await db.collection("settings").doc(user).get();
+                config = snapshot.exists ? snapshot.data() : { tech: '7236', shift: 'Day', in: "06:00", b1: "08:30", l: "11:00", b2: "13:30", out: "15:00", autoWork: false };
+                document.getElementById('techDisp').textContent = config.tech;
+                initTaskModal();
+                loadSession();
+                if(config.autoWork) {
+                    clearInterval(monitorInterval);
+                    monitorInterval = setInterval(checkAutoTimeTrigger, 30000);
+                    checkAutoTimeTrigger();
+                }
+                render();
+            } catch (err) { console.error(err); }
         }
-    } catch (err) { console.error(err); }
-}
 
-// 2. New Logic: Trigger only when the clock hits the exact time
-function checkAutoTimeTrigger() {
-    const now = new Date();
-    const nowStr = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
-
-    // Trigger START WORK
-    if (nowStr === config.in && state === "IDLE") {
-        startNewSegment("WORKING", "DOWNTIME", "NoProject");
-    }
-
-    // Trigger BREAKS (B1, Lunch, B2)
-    const breakTimes = [config.b1, config.l, config.b2];
-    if (breakTimes.includes(nowStr) && state === "WORKING") {
-        startNewSegment("BREAK", "BREAK", "BREAK");
-    }
-
-    // Trigger RESUME WORK (End of breaks)
-    // Assumes: B1=15min, Lunch=60min, B2=15min
-    const resumeB1 = addM(config.b1, 15);
-    const resumeL  = addM(config.l, 60);
-    const resumeB2 = addM(config.b2, 15);
-
-    if ((nowStr === resumeB1 || nowStr === resumeL || nowStr === resumeB2) && state === "BREAK") {
-        startNewSegment("WORKING", "DOWNTIME", "NoProject");
-    }
-
-    // Trigger AUTO-OUT
-    if (nowStr === config.out && state !== "IDLE") {
-        document.getElementById('finishShiftBtn').click();
-    }
-}
+        function checkAutoTimeTrigger() {
+            const nowStr = new Date().getHours().toString().padStart(2,'0') + ":" + new Date().getMinutes().toString().padStart(2,'0');
+            if (nowStr === config.in && state === "IDLE") startNewSegment("WORKING", "DOWNTIME", "NoProject");
+            if ([config.b1, config.l, config.b2].includes(nowStr) && state === "WORKING") startNewSegment("BREAK", "BREAK", "BREAK");
+            const resB1 = addM(config.b1, 15), resL = addM(config.l, 60), resB2 = addM(config.b2, 15);
+            if ([resB1, resL, resB2].includes(nowStr) && state === "BREAK") startNewSegment("WORKING", "DOWNTIME", "NoProject");
+            if (nowStr === config.out && state !== "IDLE") document.getElementById('finishShiftBtn').click();
+        }
 
         function addM(t, m) { const [h, mi] = t.split(':').map(Number); const d = new Date(0,0,0,h,mi+m); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
 
         document.getElementById('mainActionButton').onclick = () => {
-            if (state === "IDLE" || state === "BREAK") {
-                initTaskModal();
-                document.getElementById('taskModal').classList.remove('hidden');
-            } else startNewSegment("BREAK", "BREAK", "BREAK");
+            if (state === "IDLE" || state === "BREAK") { initTaskModal(); document.getElementById('taskModal').classList.remove('hidden'); }
+            else startNewSegment("BREAK", "BREAK", "BREAK");
         };
 
         document.getElementById('confirmTask').onclick = () => {
@@ -210,20 +202,37 @@ function checkAutoTimeTrigger() {
             document.getElementById('taskModal').classList.add('hidden');
         };
 
-        function startNewSegment(newState, main, sub, customIn = null) {
+        function startNewSegment(newState, main, sub) {
             const now = new Date();
-            const timeStr = customIn || now.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit' });
-            if (logs.length > 0) {
-                logs[0].out = timeStr;
-                logs[0].dur = calcD(logs[0].in, logs[0].out);
-            }
+            const timeStr = now.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit' });
+            if (logs.length > 0) { logs[0].out = timeStr; logs[0].dur = calcD(logs[0].in, logs[0].out); }
             state = newState;
-            logs.unshift({ tech: config.tech, in: timeStr, out: "...", dur: "00:00:00", main: main, sub: sub, rawStart: customIn ? null : now });
-            updateUI();
-            if(!customIn) startTimer();
-            render();
+            logs.unshift({ tech: config.tech, in: timeStr, out: "...", dur: "00:00:00", main: main, sub: sub, rawStart: now });
+            saveSession(); updateUI(); startTimer(); render();
             document.getElementById('finishShiftBtn').classList.remove('hidden');
         }
+
+        // AUTOFIX LOGIC
+        document.getElementById('autofixBtn').onclick = () => {
+            const targetSeconds = 7.5 * 3600; // 07:30:00
+            let currentTotal = 0;
+            logs.forEach(l => { if(l.main !== 'BREAK') currentTotal += t2S(l.dur); });
+
+            if (currentTotal < targetSeconds) {
+                const diff = targetSeconds - currentTotal;
+                const lastWork = logs.find(l => l.main !== 'BREAK');
+                if (lastWork) {
+                    let totalSec = t2S(lastWork.in) + t2S(lastWork.dur) + diff;
+                    lastWork.out = fS(totalSec).substring(0,5);
+                    lastWork.dur = calcD(lastWork.in, lastWork.out);
+                    render();
+                    saveSession();
+                    alert("Duration adjusted to 07:30:00");
+                }
+            } else {
+                alert("Duration is already over 07:30:00");
+            }
+        };
 
         function render() {
             const body = document.getElementById('logBody');
@@ -240,40 +249,50 @@ function checkAutoTimeTrigger() {
                         <td class="px-6 py-4 font-black">${l.dur}</td>
                         <td class="px-6 py-4 text-xs font-black text-blue-500">${l.main}</td>
                         <td class="px-6 py-4 text-xs text-slate-400 font-bold uppercase">${l.sub}</td>
-                        <td class="px-6 py-4 text-center"><button onclick="logs.splice(${i},1);render();" class="text-red-500">✖</button></td>
+                        <td class="px-6 py-4 text-center"><button onclick="logs.splice(${i},1); saveSession(); render();" class="text-red-500">✖</button></td>
                     </tr>`).join('');
             }
             updateTotal();
         }
 
+        function startTimer() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (logs.length > 0 && state !== 'IDLE' && logs[0].rawStart) {
+                    const diff = Math.floor((new Date() - logs[0].rawStart) / 1000);
+                    logs[0].dur = fS(diff);
+                    document.getElementById('liveClock').textContent = fS(diff);
+                    if (diff % 10 === 0) saveSession();
+                }
+            }, 1000);
+        }
+
+        function t2S(t) { if(!t || t === '...') return 0; const p = t.split(':').map(Number); return (p[0]*3600) + (p[1]*60) + (p[2] || 0); }
+        function fS(s) { const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sc=s%60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`; }
+        function calcD(s,e) { let d = t2S(e) - t2S(s); if(d<0) d += 86400; return fS(d); }
+        function updateTotal() { let t = 0; logs.forEach(l => { if(l.main !== 'BREAK' && l.dur !== '...') t += t2S(l.dur); }); document.getElementById('totalWorkTime').textContent = fS(t); }
+
         document.getElementById('mainCopyBtn').onclick = () => {
             const txt = logs.map(l => `${l.tech}\t${user}\t${config.shift}\t${getDashDate()}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\tNO`).join('\n');
-            navigator.clipboard.writeText(txt);
-            alert("Logs copied!");
+            navigator.clipboard.writeText(txt); alert("Copied!");
         };
 
-        // RESTORED HISTORY CLICK LOGIC
         document.getElementById('historyBtn').onclick = async () => {
             const list = document.getElementById('historyList');
-            list.innerHTML = '<p class="text-center py-10 text-slate-500">Loading History...</p>';
+            list.innerHTML = '<p class="text-center py-10 text-slate-500">Loading...</p>';
             document.getElementById('historyModal').classList.remove('hidden');
             try {
                 const snap = await db.collection("work_logs").where("user", "==", user).orderBy("timestamp", "desc").limit(20).get();
-                if(snap.empty) { list.innerHTML = '<p class="text-center py-10 text-slate-500">No records found.</p>'; return; }
+                if(snap.empty) { list.innerHTML = '<p class="text-center">No records.</p>'; return; }
                 list.innerHTML = '';
                 snap.forEach(docSnap => {
                     const data = docSnap.data();
-                    const dashDate = data.timestamp ? getDashDate(data.timestamp.toDate()) : 'No Date';
+                    const dDate = data.timestamp ? getDashDate(data.timestamp.toDate()) : 'No Date';
                     const div = document.createElement('div');
                     div.className = "history-card p-5 rounded-2xl mb-4";
-                    div.innerHTML = `
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="font-black text-blue-400">${dashDate}</span>
-                            <div class="flex gap-2">
-                                <button onclick="copyHistory('${docSnap.id}')" class="bg-emerald-600/20 text-emerald-400 px-3 py-1 rounded-lg text-[10px] font-bold">COPY</button>
-                                <button onclick="deleteHistory('${docSnap.id}')" class="bg-red-600/20 text-red-400 px-3 py-1 rounded-lg text-[10px] font-bold">DELETE</button>
-                            </div>
-                        </div>`;
+                    div.innerHTML = `<div class="flex justify-between items-center"><span class="font-black text-blue-400">${dDate}</span>
+                        <div class="flex gap-2"><button onclick="copyHistory('${docSnap.id}')" class="bg-emerald-600/20 text-emerald-400 px-3 py-1 rounded-lg text-xs">COPY</button>
+                        <button onclick="deleteHistory('${docSnap.id}')" class="bg-red-600/20 text-red-400 px-3 py-1 rounded-lg text-xs">DEL</button></div></div>`;
                     list.appendChild(div);
                 });
             } catch(e) { console.error(e); }
@@ -281,21 +300,13 @@ function checkAutoTimeTrigger() {
 
         window.copyHistory = async (id) => {
             const doc = await db.collection("work_logs").doc(id).get();
-            const data = doc.data();
-            const dashDate = data.timestamp ? getDashDate(data.timestamp.toDate()) : getDashDate();
-            const txt = data.logs.map(l => `${l.tech}\t${user}\t${config.shift}\t${dashDate}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\tNO`).join('\n');
-            navigator.clipboard.writeText(txt);
-            alert("History copied!");
+            const d = doc.data();
+            const txt = d.logs.map(l => `${l.tech}\t${user}\t${config.shift}\t${getDashDate(d.timestamp.toDate())}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\tNO`).join('\n');
+            navigator.clipboard.writeText(txt); alert("History copied!");
         };
 
-        window.deleteHistory = async (id) => {
-            if(confirm("Delete this entry?")) {
-                await db.collection("work_logs").doc(id).delete();
-                document.getElementById('historyBtn').onclick();
-            }
-        };
+        window.deleteHistory = async (id) => { if(confirm("Delete?")) { await db.collection("work_logs").doc(id).delete(); document.getElementById('historyBtn').click(); } };
 
-        // UI HELPERS
         function initTaskModal() {
             const m = document.getElementById('modalMainCat'), s = document.getElementById('modalSubCat');
             m.innerHTML = Object.keys(categoryData).map(k => `<option value="${k}">${k}</option>`).join('');
@@ -309,39 +320,17 @@ function checkAutoTimeTrigger() {
             btn.className = state === "WORKING" ? "bg-amber-500 text-white px-10 py-4 rounded-2xl font-black" : "bg-blue-600 text-white px-10 py-4 rounded-2xl font-black";
         }
 
-        function startTimer() {
-            clearInterval(timerInterval);
-            timerInterval = setInterval(() => {
-                if (logs.length > 0 && state !== 'IDLE' && logs[0].rawStart) {
-                    const diff = Math.floor((new Date() - logs[0].rawStart) / 1000);
-                    logs[0].dur = fS(diff);
-                    document.getElementById('liveClock').textContent = fS(diff);
-                }
-            }, 1000);
-        }
-
-        function t2S(t) { if(t === '...') return 0; const p = t.split(':').map(Number); return (p[0]*3600) + (p[1]*60) + (p[2] || 0); }
-        function fS(s) { const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sc=s%60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`; }
-        function calcD(s,e) { let d = t2S(e) - t2S(s); if(d<0) d += 86400; return fS(d); }
-        function updateTotal() { let t = 0; logs.forEach(l => { if(l.main !== 'BREAK' && l.dur !== '...') t += t2S(l.dur); }); document.getElementById('totalWorkTime').textContent = fS(t); }
-
         document.getElementById('settingsBtn').onclick = () => {
-            document.getElementById('cfgTech').value = config.tech;
-            document.getElementById('cfgShift').value = config.shift;
-            document.getElementById('autoWorkToggle').checked = config.autoWork;
-            document.getElementById('setIn').value = config.in;
-            document.getElementById('setB1').value = config.b1;
-            document.getElementById('setL').value = config.l;
-            document.getElementById('setB2').value = config.b2;
-            document.getElementById('setOut').value = config.out;
+            document.getElementById('cfgTech').value = config.tech; document.getElementById('cfgShift').value = config.shift;
+            document.getElementById('autoWorkToggle').checked = config.autoWork; document.getElementById('setIn').value = config.in;
+            document.getElementById('setB1').value = config.b1; document.getElementById('setL').value = config.l;
+            document.getElementById('setB2').value = config.b2; document.getElementById('setOut').value = config.out;
             document.getElementById('settingsModal').classList.remove('hidden');
         };
 
         document.getElementById('saveSettings').onclick = async () => {
             config = { tech: document.getElementById('cfgTech').value, shift: document.getElementById('cfgShift').value, in: document.getElementById('setIn').value, b1: document.getElementById('setB1').value, l: document.getElementById('setL').value, b2: document.getElementById('setB2').value, out: document.getElementById('setOut').value, autoWork: document.getElementById('autoWorkToggle').checked };
-            await db.collection("settings").doc(user).set(config);
-            alert("Settings saved!");
-            location.reload();
+            await db.collection("settings").doc(user).set(config); alert("Settings saved!"); location.reload();
         };
 
         document.getElementById('finishShiftBtn').onclick = async () => {
@@ -349,6 +338,7 @@ function checkAutoTimeTrigger() {
             const now = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit' });
             if(logs.length > 0) { logs[0].out = now; logs[0].dur = calcD(logs[0].in, logs[0].out); }
             await db.collection("work_logs").add({ user, logs, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+            localStorage.removeItem(`activeLogs_${user}`); localStorage.removeItem(`activeState_${user}`);
             alert("Saved!"); location.reload();
         };
     </script>
