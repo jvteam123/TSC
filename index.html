@@ -209,7 +209,6 @@
             document.getElementById('lockStatus').textContent = "Finish Shift first";
         }
 
-        // BUTTON ACTIONS
         document.getElementById('loginSubmit').onclick = async () => {
             user = document.getElementById('loginUsername').value.trim().toLowerCase();
             if(!user) return;
@@ -236,6 +235,7 @@
             document.getElementById('taskModal').classList.add('hidden');
         };
 
+        // FIXED: Now saves full shift as one entry
         document.getElementById('finishShiftBtn').onclick = async () => {
             if(!confirm("Finish Shift?")) return;
             const now = new Date();
@@ -252,7 +252,16 @@
             
             document.getElementById('startOTBtn').classList.remove('hidden');
             saveSession(); render(); updateUI();
-            await db.collection("work_logs").add({ user, logs, tech: config.tech, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+            
+            // Save current logs array as one record
+            await db.collection("work_logs").add({ 
+                user, 
+                logs, // The full array of tasks for the shift
+                tech: config.tech, 
+                date: getISODate(),
+                timestamp: firebase.firestore.FieldValue.serverTimestamp() 
+            });
+            alert("Shift saved to history.");
         };
 
         document.getElementById('resetShiftBtn').onclick = () => { 
@@ -276,7 +285,6 @@
             render(); saveSession(); alert("Auto-Sync Complete.");
         };
 
-        // HELPERS
         function updateUI() {
             const btn = document.getElementById('mainActionButton');
             if (shiftFinished) { btn.textContent = "NEW SHIFT"; btn.className = "bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black"; }
@@ -325,18 +333,8 @@
             const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = `Logs_${user}.csv`; a.click();
         }
 
-        // SETTINGS
         document.getElementById('saveSettings').onclick = async () => {
-            config = { 
-                tech: document.getElementById('cfgTech').value, 
-                shift: document.getElementById('cfgShift').value, 
-                in: document.getElementById('setIn').value, 
-                b1: document.getElementById('setB1').value, 
-                l: document.getElementById('setL').value, 
-                b2: document.getElementById('setB2').value, 
-                out: document.getElementById('setOut').value,
-                autoPilotEnabled: document.getElementById('cfgAutoPilot').checked
-            };
+            config = { tech: document.getElementById('cfgTech').value, shift: document.getElementById('cfgShift').value, in: document.getElementById('setIn').value, b1: document.getElementById('setB1').value, l: document.getElementById('setL').value, b2: document.getElementById('setB2').value, out: document.getElementById('setOut').value, autoPilotEnabled: document.getElementById('cfgAutoPilot').checked };
             await db.collection("settings").doc(user).set(config);
             document.getElementById('settingsModal').classList.add('hidden');
             document.getElementById('techDisp').textContent = config.tech;
@@ -350,25 +348,34 @@
             document.getElementById('settingsModal').classList.remove('hidden'); 
         };
 
-        // HISTORY
+        // FIXED: History now loads by full shift entry
         document.getElementById('historyBtn').onclick = loadHistory;
         async function loadHistory() {
-            const list = document.getElementById('historyList'); list.innerHTML = 'Fetching cloud records...'; document.getElementById('historyModal').classList.remove('hidden');
+            const list = document.getElementById('historyList'); 
+            list.innerHTML = 'Fetching cloud records...'; 
+            document.getElementById('historyModal').classList.remove('hidden');
             const snap = await db.collection("work_logs").where("user", "==", user).orderBy("timestamp", "desc").limit(15).get();
             list.innerHTML = snap.empty ? 'No records.' : '';
             snap.forEach(doc => {
-                const d = doc.data(); const div = document.createElement('div');
+                const d = doc.data(); 
+                const div = document.createElement('div');
                 div.className = "bg-slate-800 p-4 rounded-xl flex justify-between items-center mb-2 border border-slate-700";
-                div.innerHTML = `<div><p class="font-black text-blue-400">${d.timestamp ? d.timestamp.toDate().toLocaleDateString() : 'N/A'}</p><p class="text-[10px] text-slate-500">${d.logs.length} Tasks</p></div>
+                div.innerHTML = `<div><p class="font-black text-blue-400">${d.date || 'Unknown'}</p><p class="text-[10px] text-slate-500">${d.logs.length} Tasks Recorded</p></div>
                     <div class="flex gap-2">
-                        <button onclick="copyHistory('${doc.id}')" class="bg-blue-600 px-4 py-2 rounded-lg text-xs font-bold">COPY</button>
-                        <button onclick="deleteHistory('${doc.id}')" class="bg-red-600/20 text-red-500 border border-red-500/30 px-3 py-2 rounded-lg text-xs hover:bg-red-600 hover:text-white">DELETE PERMANENT</button>
+                        <button onclick="copyHistory('${doc.id}')" class="bg-blue-600 px-4 py-2 rounded-lg text-xs font-bold">COPY SHIFT</button>
+                        <button onclick="deleteHistory('${doc.id}')" class="bg-red-600/20 text-red-500 border border-red-500/30 px-3 py-2 rounded-lg text-xs hover:bg-red-600 hover:text-white">DELETE</button>
                     </div>`;
-                list.append(div); div.dataset.logData = JSON.stringify(d.logs);
+                list.append(div); 
+                div.dataset.logData = JSON.stringify(d.logs);
             });
         }
-        window.copyHistory = (id) => { const btn = event.target; const logsToCopy = JSON.parse(btn.closest('div.bg-slate-800').dataset.logData); const txt = logsToCopy.map(l => `${config.tech}\t${user}\t${l.shiftName || config.shift}\t${l.date}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\t${l.main.includes('[OT]')?'YES':'NO'}`).join('\n'); navigator.clipboard.writeText(txt); btn.textContent = "COPIED!"; setTimeout(() => btn.textContent = "COPY", 2000); };
-        window.deleteHistory = async (id) => { if(!confirm("DELETE PERMANENTLY FROM CLOUD?")) return; await db.collection("work_logs").doc(id).delete(); loadHistory(); };
+        window.copyHistory = (id) => { 
+            const btn = event.target; 
+            const logsToCopy = JSON.parse(btn.closest('div.bg-slate-800').dataset.logData); 
+            const txt = logsToCopy.map(l => `${config.tech}\t${user}\t${l.shiftName || config.shift}\t${l.date}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\t${l.main.includes('[OT]')?'YES':'NO'}`).join('\n'); 
+            navigator.clipboard.writeText(txt); btn.textContent = "COPIED!"; setTimeout(() => btn.textContent = "COPY SHIFT", 2000); 
+        };
+        window.deleteHistory = async (id) => { if(!confirm("DELETE PERMANENTLY?")) return; await db.collection("work_logs").doc(id).delete(); loadHistory(); };
         function initTaskModal() { const m = document.getElementById('modalMainCat'), s = document.getElementById('modalSubCat'); m.innerHTML = Object.keys(categoryData).map(k => `<option value="${k}">${k}</option>`).join(''); m.onchange = () => s.innerHTML = categoryData[m.value].map(v => `<option value="${v}">${v}</option>`).join(''); m.onchange(); }
     </script>
 </body>
