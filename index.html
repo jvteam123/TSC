@@ -204,7 +204,7 @@
         }
 
         function updateTotal() {
-            let t = 0; logs.forEach(l => { if(l.main !== 'BREAK' && l.dur !== '...') t += t2S(l.dur); });
+            let t = 0; logs.forEach(l => { if(l.main !== 'BREAK' && !l.main.includes('[OT]') && l.dur !== '...') t += t2S(l.dur); });
             document.getElementById('totalWorkTime').textContent = fS(t);
             
             const percent = Math.min((t / SHIFT_GOAL) * 100, 100);
@@ -300,16 +300,34 @@
                     const d = doc.data();
                     const dateStr = d.timestamp ? d.timestamp.toDate().toLocaleDateString() : 'N/A';
                     const div = document.createElement('div');
-                    div.className = "history-card p-4 rounded-xl flex justify-between items-center";
-                    const btn = document.createElement('button');
-                    btn.className = "bg-blue-600 px-4 py-2 rounded-lg font-bold text-xs hover:bg-blue-500";
-                    btn.textContent = "COPY LOGS";
-                    btn.onclick = () => {
-                        const txt = d.logs.map(l => `${l.tech}\t${user}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}`).join('\n');
+                    div.className = "history-card p-4 rounded-xl flex justify-between items-center mb-2";
+                    
+                    const btnGrp = document.createElement('div');
+                    btnGrp.className = "flex gap-2";
+
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = "bg-blue-600 px-4 py-2 rounded-lg font-bold text-xs hover:bg-blue-500";
+                    copyBtn.textContent = "COPY";
+                    copyBtn.onclick = () => {
+                        const txt = d.logs.map(l => `${l.tech}\t${user}\t${config.shift}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}`).join('\n');
                         navigator.clipboard.writeText(txt); alert("Shift logs copied!");
                     };
+
+                    const delBtn = document.createElement('button');
+                    delBtn.className = "bg-red-600/20 text-red-500 border border-red-500/30 px-4 py-2 rounded-lg font-bold text-xs hover:bg-red-600 hover:text-white";
+                    delBtn.textContent = "DELETE";
+                    delBtn.onclick = async () => {
+                        if(confirm("Permanently delete this record?")) {
+                            await db.collection("work_logs").doc(doc.id).delete();
+                            div.remove();
+                        }
+                    };
+
                     div.innerHTML = `<div><p class="font-black text-blue-400">${dateStr}</p><p class="text-[10px] text-slate-500">${d.logs.length} Entries</p></div>`;
-                    div.appendChild(btn); list.appendChild(div);
+                    btnGrp.appendChild(copyBtn);
+                    btnGrp.appendChild(delBtn);
+                    div.appendChild(btnGrp);
+                    list.appendChild(div);
                 });
             } catch (e) { list.innerHTML = `<p class="text-red-500 p-8 text-center">${e.message}</p>`; }
         };
@@ -366,11 +384,37 @@
             if(logs.length > 0 && logs[0].out === "...") { logs[0].out = timeStr; logs[0].dur = calcD(logs[0].in, logs[0].out); }
             shiftFinished = true; state = "IDLE";
             document.getElementById('globalFixBtn').disabled = false;
+            document.getElementById('lockStatus').textContent = "Sync Ready";
             saveSession(); render(); updateUI();
             await db.collection("work_logs").add({ user, logs, tech: config.tech, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
         };
 
         document.getElementById('resetShiftBtn').onclick = () => { if(confirm("Wipe logs?")) { logs = []; state = "IDLE"; shiftFinished = false; saveSession(); render(); updateUI(); } };
+        
+        document.getElementById('globalFixBtn').onclick = () => {
+            if (!logs.length) return;
+            // 1. Set first log to Start Time
+            logs[logs.length-1].in = addRandomSeconds(config.in);
+            
+            // 2. Adjust last log to hit SHIFT_GOAL (07:30:00)
+            let workSec = 0;
+            for(let i=1; i<logs.length; i++) {
+                if(logs[i].main !== 'BREAK' && !logs[i].main.includes('[OT]')) workSec += t2S(logs[i].dur);
+            }
+            const needed = SHIFT_GOAL - workSec;
+            if(needed > 0) {
+                logs[0].out = fS(t2S(logs[0].in) + needed, true);
+                logs[0].dur = calcD(logs[0].in, logs[0].out);
+            }
+
+            // 3. Chain sync gaps
+            for(let i=logs.length-2; i>=0; i--) {
+                logs[i].in = logs[i+1].out;
+                if(logs[i].out !== "...") logs[i].dur = calcD(logs[i].in, logs[i].out);
+            }
+            render(); saveSession(); alert("Sync complete: Total Work set to 07:30.");
+        };
+
         document.getElementById('saveSettings').onclick = async () => {
             config = { tech: document.getElementById('cfgTech').value, shift: document.getElementById('cfgShift').value, in: document.getElementById('setIn').value, b1: document.getElementById('setB1').value, l: document.getElementById('setL').value, b2: document.getElementById('setB2').value, out: document.getElementById('setOut').value };
             await db.collection("settings").doc(user).set(config);
