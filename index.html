@@ -22,10 +22,10 @@
 <body class="p-4 md:p-8">
 
     <div id="loginModal" class="modal fixed inset-0 flex items-center justify-center p-4 z-[5000]">
-        <div class="bg-slate-900 w-full max-w-sm rounded-3xl border border-slate-700 p-8 text-center shadow-2xl">
-            <h2 class="text-xl font-black mb-6 uppercase tracking-widest text-blue-500">User Login</h2>
-            <input type="text" id="loginUsername" placeholder="Enter Username" class="w-full p-4 rounded-xl mb-4 text-center font-bold">
-            <button id="loginSubmit" class="w-full bg-blue-600 py-4 rounded-xl font-black hover:bg-blue-500 transition-all">ACCESS DASHBOARD</button>
+        <div class="bg-slate-900 w-full max-w-[320px] rounded-2xl border border-slate-700 p-6 text-center shadow-2xl">
+            <h2 class="text-lg font-black mb-4 uppercase tracking-widest text-blue-500">User Login</h2>
+            <input type="text" id="loginUsername" placeholder="Username" class="w-full p-3 rounded-xl mb-4 text-center font-bold text-sm">
+            <button id="loginSubmit" class="w-full bg-blue-600 py-3 rounded-xl font-black text-sm hover:bg-blue-500 transition-all">ACCESS</button>
         </div>
     </div>
 
@@ -63,6 +63,7 @@
                 <thead>
                     <tr>
                         <th class="px-6 py-4">Tech #</th>
+                        <th class="px-6 py-4">User</th>
                         <th class="px-6 py-4">In</th>
                         <th class="px-6 py-4">Out</th>
                         <th class="px-6 py-4">Duration</th>
@@ -74,6 +75,9 @@
                 <tbody id="logBody" class="text-sm font-medium"></tbody>
             </table>
             <div id="emptyState" class="p-24 text-center text-slate-600 font-bold italic">No active logs.</div>
+            <div class="p-6 bg-slate-900/80 border-t border-slate-700 flex justify-end">
+                <button id="mainCopyBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-12 py-4 rounded-2xl font-black text-lg">COPY OUTPUT</button>
+            </div>
         </div>
     </div>
 
@@ -131,16 +135,8 @@
         const categoryData = { "SARANAC": ["CF"], "ACCUPLUS": ["DEM", "I3", "PCS", "REFIX", "i3QA", "RQA"], "DOWNTIME": ["NoProject"], "TRAINING": ["Formal - Accuplus"] };
         let user = '', logs = [], config = {}, state = "IDLE", timerInterval;
 
-        // HELPER: Date formatted with - separator (YYYY-MM-DD)
-        const getDashDate = (dateObj) => {
-            const d = dateObj || new Date();
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        };
+        const getDashDate = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-        // LOGIN SUBMIT
         document.getElementById('loginSubmit').onclick = async () => {
             user = document.getElementById('loginUsername').value.trim().toLowerCase();
             if(!user) return;
@@ -150,107 +146,63 @@
             await loadApp();
         };
 
-        // LOAD APP: Fixes the doc.exists error by properly fetching from Firestore
-        async function loadApp() {
-            try {
-                const snapshot = await db.collection("settings").doc(user).get();
-                if (snapshot.exists) {
-                    config = snapshot.data();
-                } else {
-                    config = { tech: '7236', shift: 'Day', in: "06:00", b1: "08:30", l: "11:00", b2: "13:30", out: "15:00", autoWork: false };
-                }
-                document.getElementById('techDisp').textContent = config.tech;
-                initTaskModal();
-                render();
-            } catch (err) {
-                console.error("Firestore Error:", err);
-            }
+        // 1. Updated loadApp to start a live monitor instead of pre-filling
+async function loadApp() {
+    try {
+        const snapshot = await db.collection("settings").doc(user).get();
+        config = snapshot.exists ? snapshot.data() : { tech: '7236', shift: 'Day', in: "06:00", b1: "08:30", l: "11:00", b2: "13:30", out: "15:00", autoWork: false };
+        document.getElementById('techDisp').textContent = config.tech;
+        initTaskModal();
+        
+        if(config.autoWork) {
+            // Check every 30 seconds if it's time to trigger an auto-event
+            setInterval(checkAutoTimeTrigger, 30000); 
+            checkAutoTimeTrigger(); // Run once immediately on login
+        } else {
+            render();
         }
+    } catch (err) { console.error(err); }
+}
 
-        // SAVE SETTINGS: Cloud-first saving to sync per user
-        document.getElementById('saveSettings').onclick = async () => {
-            config = { 
-                tech: document.getElementById('cfgTech').value, 
-                shift: document.getElementById('cfgShift').value, 
-                in: document.getElementById('setIn').value, 
-                b1: document.getElementById('setB1').value, 
-                l: document.getElementById('setL').value, 
-                b2: document.getElementById('setB2').value, 
-                out: document.getElementById('setOut').value, 
-                autoWork: document.getElementById('autoWorkToggle').checked 
-            };
-            await db.collection("settings").doc(user).set(config);
-            alert("Settings saved for " + user);
-            location.reload();
-        };
+// 2. New Logic: Trigger only when the clock hits the exact time
+function checkAutoTimeTrigger() {
+    const now = new Date();
+    const nowStr = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
 
-        // HISTORY SYSTEM: Detailed view, Copy with '-' date separator, and Delete
-        document.getElementById('historyBtn').onclick = async () => {
-            const list = document.getElementById('historyList');
-            list.innerHTML = '<p class="text-center py-10 text-slate-500">Loading History...</p>';
-            document.getElementById('historyModal').classList.remove('hidden');
+    // Trigger START WORK
+    if (nowStr === config.in && state === "IDLE") {
+        startNewSegment("WORKING", "DOWNTIME", "NoProject");
+    }
 
-            try {
-                const snap = await db.collection("work_logs").where("user", "==", user).orderBy("timestamp", "desc").limit(20).get();
-                if(snap.empty) { list.innerHTML = '<p class="text-center py-10 text-slate-500">No records found.</p>'; return; }
+    // Trigger BREAKS (B1, Lunch, B2)
+    const breakTimes = [config.b1, config.l, config.b2];
+    if (breakTimes.includes(nowStr) && state === "WORKING") {
+        startNewSegment("BREAK", "BREAK", "BREAK");
+    }
 
-                list.innerHTML = '';
-                snap.forEach(docSnapshot => {
-                    const data = docSnapshot.data();
-                    const dashDate = data.timestamp ? getDashDate(data.timestamp.toDate()) : 'No Date';
-                    const id = docSnapshot.id;
-                    const div = document.createElement('div');
-                    div.className = "history-card p-5 rounded-2xl";
-                    div.innerHTML = `
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="font-black text-blue-400">${dashDate}</span>
-                            <div class="flex gap-2">
-                                <button onclick="copyHistory('${id}')" class="bg-emerald-600/20 text-emerald-400 px-3 py-1 rounded-lg text-[10px] font-bold">COPY OUTPUT</button>
-                                <button onclick="deleteHistory('${id}')" class="bg-red-600/20 text-red-400 px-3 py-1 rounded-lg text-[10px] font-bold">DELETE</button>
-                            </div>
-                        </div>
-                        <details class="text-xs text-slate-400">
-                            <summary class="cursor-pointer hover:text-white font-bold">Show Full Details</summary>
-                            <div class="mt-4 space-y-2 border-t border-slate-700 pt-2">
-                                ${data.logs.map(l => `<div class="flex justify-between border-b border-slate-800 pb-1"><span>${l.in} - ${l.out}</span> <span class="text-blue-500">${l.main} (${l.sub})</span></div>`).join('')}
-                            </div>
-                        </details>`;
-                    list.appendChild(div);
-                });
-            } catch(e) { 
-                console.error(e);
-                list.innerHTML = `<p class="text-red-500">Error loading history.</p>`; 
-            }
-        };
+    // Trigger RESUME WORK (End of breaks)
+    // Assumes: B1=15min, Lunch=60min, B2=15min
+    const resumeB1 = addM(config.b1, 15);
+    const resumeL  = addM(config.l, 60);
+    const resumeB2 = addM(config.b2, 15);
 
-        window.copyHistory = async (id) => {
-            const docSnap = await db.collection("work_logs").doc(id).get();
-            const data = docSnap.data();
-            const dashDate = data.timestamp ? getDashDate(data.timestamp.toDate()) : getDashDate();
-            const txt = data.logs.map(l => `${l.tech}\t${user}\t${config.shift}\t${dashDate}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\tNO`).join('\n');
-            navigator.clipboard.writeText(txt);
-            alert("History copied with '-' separators!");
-        };
+    if ((nowStr === resumeB1 || nowStr === resumeL || nowStr === resumeB2) && state === "BREAK") {
+        startNewSegment("WORKING", "DOWNTIME", "NoProject");
+    }
 
-        window.deleteHistory = async (id) => {
-            if(confirm("Permanently delete this entry?")) {
-                await db.collection("work_logs").doc(id).delete();
-                document.getElementById('historyBtn').click();
-            }
-        };
+    // Trigger AUTO-OUT
+    if (nowStr === config.out && state !== "IDLE") {
+        document.getElementById('finishShiftBtn').click();
+    }
+}
 
-        // CORE LOGIC (TASK SELECTOR & TIMER)
-        function initTaskModal() {
-            const mCat = document.getElementById('modalMainCat');
-            const sCat = document.getElementById('modalSubCat');
-            mCat.innerHTML = Object.keys(categoryData).map(k => `<option value="${k}">${k}</option>`).join('');
-            mCat.onchange = () => { sCat.innerHTML = categoryData[mCat.value].map(v => `<option value="${v}">${v}</option>`).join(''); };
-            mCat.onchange();
-        }
+        function addM(t, m) { const [h, mi] = t.split(':').map(Number); const d = new Date(0,0,0,h,mi+m); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
 
         document.getElementById('mainActionButton').onclick = () => {
-            if (state === "IDLE" || state === "BREAK") document.getElementById('taskModal').classList.remove('hidden');
-            else startNewSegment("BREAK", "BREAK", "BREAK");
+            if (state === "IDLE" || state === "BREAK") {
+                initTaskModal();
+                document.getElementById('taskModal').classList.remove('hidden');
+            } else startNewSegment("BREAK", "BREAK", "BREAK");
         };
 
         document.getElementById('confirmTask').onclick = () => {
@@ -258,29 +210,20 @@
             document.getElementById('taskModal').classList.add('hidden');
         };
 
-        function startNewSegment(newState, main, sub) {
+        function startNewSegment(newState, main, sub, customIn = null) {
             const now = new Date();
-            const timeStr = now.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit' });
+            const timeStr = customIn || now.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit' });
             if (logs.length > 0) {
                 logs[0].out = timeStr;
                 logs[0].dur = calcD(logs[0].in, logs[0].out);
             }
             state = newState;
-            logs.unshift({ tech: config.tech, in: timeStr, out: "...", dur: "00:00:00", main: main, sub: sub, rawStart: now });
+            logs.unshift({ tech: config.tech, in: timeStr, out: "...", dur: "00:00:00", main: main, sub: sub, rawStart: customIn ? null : now });
             updateUI();
-            startTimer();
+            if(!customIn) startTimer();
             render();
             document.getElementById('finishShiftBtn').classList.remove('hidden');
         }
-
-        document.getElementById('finishShiftBtn').onclick = async () => {
-            if(!confirm("Submit and Save Shift to Cloud?")) return;
-            const nowTime = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit' });
-            if(logs.length > 0) { logs[0].out = nowTime; logs[0].dur = calcD(logs[0].in, logs[0].out); }
-            await db.collection("work_logs").add({ user, logs, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
-            alert("Shift Saved Successfully!");
-            location.reload();
-        };
 
         function render() {
             const body = document.getElementById('logBody');
@@ -291,6 +234,7 @@
                 body.innerHTML = logs.map((l, i) => `
                     <tr class="${i === 0 && state !== 'IDLE' ? 'active-row' : ''}">
                         <td class="px-6 py-4 font-bold text-slate-500">${l.tech}</td>
+                        <td class="px-6 py-4 font-bold text-blue-500">${user}</td>
                         <td class="px-6 py-4 text-blue-400 font-bold">${l.in}</td>
                         <td class="px-6 py-4 text-blue-400 font-bold">${l.out}</td>
                         <td class="px-6 py-4 font-black">${l.dur}</td>
@@ -300,6 +244,63 @@
                     </tr>`).join('');
             }
             updateTotal();
+        }
+
+        document.getElementById('mainCopyBtn').onclick = () => {
+            const txt = logs.map(l => `${l.tech}\t${user}\t${config.shift}\t${getDashDate()}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\tNO`).join('\n');
+            navigator.clipboard.writeText(txt);
+            alert("Logs copied!");
+        };
+
+        // RESTORED HISTORY CLICK LOGIC
+        document.getElementById('historyBtn').onclick = async () => {
+            const list = document.getElementById('historyList');
+            list.innerHTML = '<p class="text-center py-10 text-slate-500">Loading History...</p>';
+            document.getElementById('historyModal').classList.remove('hidden');
+            try {
+                const snap = await db.collection("work_logs").where("user", "==", user).orderBy("timestamp", "desc").limit(20).get();
+                if(snap.empty) { list.innerHTML = '<p class="text-center py-10 text-slate-500">No records found.</p>'; return; }
+                list.innerHTML = '';
+                snap.forEach(docSnap => {
+                    const data = docSnap.data();
+                    const dashDate = data.timestamp ? getDashDate(data.timestamp.toDate()) : 'No Date';
+                    const div = document.createElement('div');
+                    div.className = "history-card p-5 rounded-2xl mb-4";
+                    div.innerHTML = `
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-black text-blue-400">${dashDate}</span>
+                            <div class="flex gap-2">
+                                <button onclick="copyHistory('${docSnap.id}')" class="bg-emerald-600/20 text-emerald-400 px-3 py-1 rounded-lg text-[10px] font-bold">COPY</button>
+                                <button onclick="deleteHistory('${docSnap.id}')" class="bg-red-600/20 text-red-400 px-3 py-1 rounded-lg text-[10px] font-bold">DELETE</button>
+                            </div>
+                        </div>`;
+                    list.appendChild(div);
+                });
+            } catch(e) { console.error(e); }
+        };
+
+        window.copyHistory = async (id) => {
+            const doc = await db.collection("work_logs").doc(id).get();
+            const data = doc.data();
+            const dashDate = data.timestamp ? getDashDate(data.timestamp.toDate()) : getDashDate();
+            const txt = data.logs.map(l => `${l.tech}\t${user}\t${config.shift}\t${dashDate}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\tNO`).join('\n');
+            navigator.clipboard.writeText(txt);
+            alert("History copied!");
+        };
+
+        window.deleteHistory = async (id) => {
+            if(confirm("Delete this entry?")) {
+                await db.collection("work_logs").doc(id).delete();
+                document.getElementById('historyBtn').onclick();
+            }
+        };
+
+        // UI HELPERS
+        function initTaskModal() {
+            const m = document.getElementById('modalMainCat'), s = document.getElementById('modalSubCat');
+            m.innerHTML = Object.keys(categoryData).map(k => `<option value="${k}">${k}</option>`).join('');
+            m.onchange = () => s.innerHTML = categoryData[m.value].map(v => `<option value="${v}">${v}</option>`).join('');
+            m.onchange();
         }
 
         function updateUI() {
@@ -319,15 +320,10 @@
             }, 1000);
         }
 
-        function updateTotal() {
-            let t = 0;
-            logs.forEach(l => { if(l.main !== 'BREAK' && l.dur !== '...') t += t2S(l.dur); });
-            document.getElementById('totalWorkTime').textContent = fS(t);
-        }
-
         function t2S(t) { if(t === '...') return 0; const p = t.split(':').map(Number); return (p[0]*3600) + (p[1]*60) + (p[2] || 0); }
         function fS(s) { const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sc=s%60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`; }
         function calcD(s,e) { let d = t2S(e) - t2S(s); if(d<0) d += 86400; return fS(d); }
+        function updateTotal() { let t = 0; logs.forEach(l => { if(l.main !== 'BREAK' && l.dur !== '...') t += t2S(l.dur); }); document.getElementById('totalWorkTime').textContent = fS(t); }
 
         document.getElementById('settingsBtn').onclick = () => {
             document.getElementById('cfgTech').value = config.tech;
@@ -339,6 +335,21 @@
             document.getElementById('setB2').value = config.b2;
             document.getElementById('setOut').value = config.out;
             document.getElementById('settingsModal').classList.remove('hidden');
+        };
+
+        document.getElementById('saveSettings').onclick = async () => {
+            config = { tech: document.getElementById('cfgTech').value, shift: document.getElementById('cfgShift').value, in: document.getElementById('setIn').value, b1: document.getElementById('setB1').value, l: document.getElementById('setL').value, b2: document.getElementById('setB2').value, out: document.getElementById('setOut').value, autoWork: document.getElementById('autoWorkToggle').checked };
+            await db.collection("settings").doc(user).set(config);
+            alert("Settings saved!");
+            location.reload();
+        };
+
+        document.getElementById('finishShiftBtn').onclick = async () => {
+            if(!confirm("Submit Shift?")) return;
+            const now = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit' });
+            if(logs.length > 0) { logs[0].out = now; logs[0].dur = calcD(logs[0].in, logs[0].out); }
+            await db.collection("work_logs").add({ user, logs, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+            alert("Saved!"); location.reload();
         };
     </script>
 </body>
