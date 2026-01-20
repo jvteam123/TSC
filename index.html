@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Logger | Smart A-Work</title>
+    <title>Pro Logger | Production v1.1</title>
     <script src="https://cdn.tailwindcss.com/3.4.3"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <style>
         :root { --bg-main: #0f172a; --bg-card: #1e293b; }
         body { background-color: var(--bg-main); color: #f1f5f9; font-family: 'Inter', sans-serif; }
-        .modal { backdrop-filter: blur(12px); background-color: rgba(0, 0, 0, 0.85); }
+        .modal { backdrop-filter: blur(12px); background-color: rgba(0, 0, 0, 0.85); z-index: 5000; }
         .data-grid th { background: #1e293b; color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; border-bottom: 2px solid #334155; }
         .data-grid td { border-bottom: 1px solid #334155; }
-        .active-row { background-color: rgba(59, 130, 246, 0.05); border-left: 4px solid #3b82f6; }
+        .active-row { background-color: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; }
         input, select { background-color: #0f172a !important; border: 1px solid #334155 !important; color: white !important; }
         .history-card { background: #1e293b; border: 1px solid #334155; transition: all 0.2s; }
         .history-card:hover { border-color: #3b82f6; }
@@ -21,7 +21,7 @@
 </head>
 <body class="p-4 md:p-8">
 
-    <div id="loginModal" class="modal fixed inset-0 flex items-center justify-center p-4 z-[5000]">
+    <div id="loginModal" class="modal fixed inset-0 flex items-center justify-center p-4">
         <div class="bg-slate-900 w-full max-w-[320px] rounded-2xl border border-slate-700 p-6 text-center shadow-2xl">
             <h2 class="text-lg font-black mb-4 uppercase tracking-widest text-blue-500">User Login</h2>
             <input type="text" id="loginUsername" placeholder="Username" class="w-full p-3 rounded-xl mb-4 text-center font-bold text-sm">
@@ -43,7 +43,7 @@
 
         <div class="bg-slate-800/50 p-6 rounded-3xl border border-slate-700 mb-8 flex flex-wrap gap-6 items-center justify-between shadow-xl">
             <div class="flex gap-4">
-                <button id="mainActionButton" class="bg-blue-600 hover:bg-blue-500 text-white px-10 py-4 rounded-2xl font-black text-lg shadow-lg transition-all active:scale-95">START WORK</button>
+                <button id="mainActionButton" class="bg-blue-600 hover:bg-blue-500 text-white px-10 py-4 rounded-2xl font-black text-lg shadow-lg active:scale-95 transition-all">START WORK</button>
                 <button id="finishShiftBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-4 rounded-2xl font-bold hidden">FINISH SHIFT</button>
             </div>
             <div class="flex items-center gap-6">
@@ -52,7 +52,7 @@
                     <p id="liveClock" class="text-3xl font-mono font-bold text-blue-400">00:00:00</p>
                 </div>
                 <div class="text-right border-l border-slate-700 pl-6">
-                    <p class="text-[10px] text-slate-500 font-black uppercase">Total Shift</p>
+                    <p class="text-[10px] text-slate-500 font-black uppercase">Total Duration</p>
                     <p id="totalWorkTime" class="text-xl font-mono font-bold text-emerald-400">00:00:00</p>
                 </div>
             </div>
@@ -74,37 +74,39 @@
                 </thead>
                 <tbody id="logBody" class="text-sm font-medium"></tbody>
             </table>
-            <div id="emptyState" class="p-24 text-center text-slate-600 font-bold italic">No active logs.</div>
+            <div id="emptyState" class="p-24 text-center text-slate-600 font-bold italic">No logs found.</div>
             
-            <div class="p-6 bg-slate-900/80 border-t border-slate-700 flex justify-between items-center">
-                <button id="autofixBtn" class="bg-amber-600/20 text-amber-500 border border-amber-500/30 px-6 py-3 rounded-xl font-bold text-sm hover:bg-amber-600/30">🪄 AUTOFIX (07:30)</button>
+            <div class="p-6 bg-slate-900/80 border-t border-slate-700 flex justify-end items-center">
                 <button id="mainCopyBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-12 py-4 rounded-2xl font-black text-lg">COPY OUTPUT</button>
             </div>
         </div>
     </div>
 
-    <div id="historyModal" class="modal fixed inset-0 flex items-center justify-center p-4 z-[4800] hidden">
+    <div id="historyModal" class="modal fixed inset-0 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-700 p-8 rounded-[2rem] w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-black text-blue-400 uppercase tracking-widest">Work History</h2>
+                <h2 class="text-xl font-black text-blue-400 uppercase">Work History</h2>
                 <button onclick="document.getElementById('historyModal').classList.add('hidden')" class="text-slate-500 hover:text-white text-2xl">✕</button>
             </div>
             <div id="historyList" class="flex-1 overflow-y-auto space-y-4 pr-2"></div>
         </div>
     </div>
 
-    <div id="taskModal" class="modal fixed inset-0 flex items-center justify-center p-4 z-[4500] hidden">
+    <div id="taskModal" class="modal fixed inset-0 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-700 p-8 rounded-3xl w-full max-w-md shadow-2xl">
             <h2 class="text-lg font-black mb-6 uppercase text-blue-400">Select Task</h2>
             <div class="space-y-4">
                 <div><label class="text-[10px] font-bold text-slate-500 uppercase">Category</label><select id="modalMainCat" class="w-full p-4 rounded-xl mt-1"></select></div>
                 <div><label class="text-[10px] font-bold text-slate-500 uppercase">Sub-Category</label><select id="modalSubCat" class="w-full p-4 rounded-xl mt-1"></select></div>
             </div>
-            <div class="flex justify-end gap-3 mt-8"><button onclick="document.getElementById('taskModal').classList.add('hidden')" class="text-slate-400 font-bold">Cancel</button><button id="confirmTask" class="bg-blue-600 px-8 py-3 rounded-xl font-black">START RECORDING</button></div>
+            <div class="flex justify-end gap-3 mt-8">
+                <button onclick="document.getElementById('taskModal').classList.add('hidden')" class="text-slate-400 font-bold">Cancel</button>
+                <button id="confirmTask" class="bg-blue-600 px-8 py-3 rounded-xl font-black">START RECORDING</button>
+            </div>
         </div>
     </div>
 
-    <div id="settingsModal" class="modal fixed inset-0 flex items-center justify-center p-4 z-[4000] hidden">
+    <div id="settingsModal" class="modal fixed inset-0 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-700 p-8 rounded-[2rem] w-full max-w-2xl shadow-2xl">
             <h2 class="text-xl font-black mb-6 text-blue-400 uppercase tracking-widest text-center">Settings</h2>
             <div class="grid grid-cols-2 gap-4 mb-6">
@@ -112,7 +114,7 @@
                 <div><label class="text-[10px] text-slate-500 font-bold uppercase">Shift</label><select id="cfgShift" class="w-full p-3 rounded-xl mt-1"><option>Day</option><option>Night</option></select></div>
             </div>
             <div class="bg-blue-600/10 border border-blue-500/20 p-5 rounded-2xl mb-8 flex items-center justify-between">
-                <div><h4 class="font-bold text-blue-400">Smart Auto-Work</h4><p class="text-[10px] text-slate-500">Auto-starts and handles breaks.</p></div>
+                <div><h4 class="font-bold text-blue-400">Smart Auto-Work</h4><p class="text-[10px] text-slate-500">Auto-triggers breaks based on settings.</p></div>
                 <input type="checkbox" id="autoWorkToggle" class="w-6 h-6 rounded">
             </div>
             <div class="grid grid-cols-5 gap-2 mb-8">
@@ -139,8 +141,8 @@
 
         const getDashDate = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-        // Persistence Functions
         function saveSession() {
+            if(!user) return;
             localStorage.setItem(`activeLogs_${user}`, JSON.stringify(logs));
             localStorage.setItem(`activeState_${user}`, state);
         }
@@ -212,26 +214,26 @@
             document.getElementById('finishShiftBtn').classList.remove('hidden');
         }
 
-        // AUTOFIX LOGIC
-        document.getElementById('autofixBtn').onclick = () => {
-            const targetSeconds = 7.5 * 3600; // 07:30:00
-            let currentTotal = 0;
-            logs.forEach(l => { if(l.main !== 'BREAK') currentTotal += t2S(l.dur); });
-
-            if (currentTotal < targetSeconds) {
-                const diff = targetSeconds - currentTotal;
-                const lastWork = logs.find(l => l.main !== 'BREAK');
-                if (lastWork) {
-                    let totalSec = t2S(lastWork.in) + t2S(lastWork.dur) + diff;
-                    lastWork.out = fS(totalSec).substring(0,5);
-                    lastWork.dur = calcD(lastWork.in, lastWork.out);
-                    render();
-                    saveSession();
-                    alert("Duration adjusted to 07:30:00");
-                }
+        // PER-ROW AUTOFIX: Match schedule logic
+        window.autofixRow = (index) => {
+            const row = logs[index];
+            const isFirstSegment = (index === logs.length - 1);
+            
+            if(isFirstSegment) {
+                // If it's the start of the shift, fix "In" time to Settings
+                row.in = config.in;
+                if(row.out !== "...") row.dur = calcD(row.in, row.out);
+                alert(`Start time fixed to ${config.in}`);
             } else {
-                alert("Duration is already over 07:30:00");
+                // If middle segment, match "In" time to the "Out" time of previous segment
+                const prev = logs[index + 1];
+                if(prev && prev.out !== "...") {
+                    row.in = prev.out;
+                    if(row.out !== "...") row.dur = calcD(row.in, row.out);
+                }
             }
+            render();
+            saveSession();
         };
 
         function render() {
@@ -249,7 +251,10 @@
                         <td class="px-6 py-4 font-black">${l.dur}</td>
                         <td class="px-6 py-4 text-xs font-black text-blue-500">${l.main}</td>
                         <td class="px-6 py-4 text-xs text-slate-400 font-bold uppercase">${l.sub}</td>
-                        <td class="px-6 py-4 text-center"><button onclick="logs.splice(${i},1); saveSession(); render();" class="text-red-500">✖</button></td>
+                        <td class="px-6 py-4 text-center flex justify-center gap-2">
+                            <button onclick="autofixRow(${i})" title="Autofix Time" class="text-amber-500 hover:scale-110 transition-all">🪄</button>
+                            <button onclick="logs.splice(${i},1); saveSession(); render();" class="text-red-500">✖</button>
+                        </td>
                     </tr>`).join('');
             }
             updateTotal();
@@ -272,40 +277,36 @@
         function calcD(s,e) { let d = t2S(e) - t2S(s); if(d<0) d += 86400; return fS(d); }
         function updateTotal() { let t = 0; logs.forEach(l => { if(l.main !== 'BREAK' && l.dur !== '...') t += t2S(l.dur); }); document.getElementById('totalWorkTime').textContent = fS(t); }
 
-        document.getElementById('mainCopyBtn').onclick = () => {
-            const txt = logs.map(l => `${l.tech}\t${user}\t${config.shift}\t${getDashDate()}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\tNO`).join('\n');
-            navigator.clipboard.writeText(txt); alert("Copied!");
-        };
-
         document.getElementById('historyBtn').onclick = async () => {
             const list = document.getElementById('historyList');
             list.innerHTML = '<p class="text-center py-10 text-slate-500">Loading...</p>';
             document.getElementById('historyModal').classList.remove('hidden');
             try {
-                const snap = await db.collection("work_logs").where("user", "==", user).orderBy("timestamp", "desc").limit(20).get();
-                if(snap.empty) { list.innerHTML = '<p class="text-center">No records.</p>'; return; }
+                const snap = await db.collection("work_logs").where("user", "==", user).orderBy("timestamp", "desc").limit(15).get();
+                if(snap.empty) return list.innerHTML = '<p class="text-center">No history.</p>';
                 list.innerHTML = '';
                 snap.forEach(docSnap => {
                     const data = docSnap.data();
-                    const dDate = data.timestamp ? getDashDate(data.timestamp.toDate()) : 'No Date';
+                    const dDate = data.timestamp ? getDashDate(data.timestamp.toDate()) : 'Recent';
                     const div = document.createElement('div');
                     div.className = "history-card p-5 rounded-2xl mb-4";
                     div.innerHTML = `<div class="flex justify-between items-center"><span class="font-black text-blue-400">${dDate}</span>
-                        <div class="flex gap-2"><button onclick="copyHistory('${docSnap.id}')" class="bg-emerald-600/20 text-emerald-400 px-3 py-1 rounded-lg text-xs">COPY</button>
-                        <button onclick="deleteHistory('${docSnap.id}')" class="bg-red-600/20 text-red-400 px-3 py-1 rounded-lg text-xs">DEL</button></div></div>`;
+                        <div class="flex gap-2"><button onclick="copyHist('${docSnap.id}')" class="bg-emerald-600/20 text-emerald-400 px-3 py-1 rounded-lg text-xs">COPY</button>
+                        <button onclick="delHist('${docSnap.id}')" class="bg-red-600/20 text-red-400 px-3 py-1 rounded-lg text-xs">DEL</button></div></div>`;
                     list.appendChild(div);
                 });
             } catch(e) { console.error(e); }
         };
 
-        window.copyHistory = async (id) => {
+        window.copyHist = async (id) => {
             const doc = await db.collection("work_logs").doc(id).get();
             const d = doc.data();
-            const txt = d.logs.map(l => `${l.tech}\t${user}\t${config.shift}\t${getDashDate(d.timestamp.toDate())}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\tNO`).join('\n');
-            navigator.clipboard.writeText(txt); alert("History copied!");
+            const date = d.timestamp ? getDashDate(d.timestamp.toDate()) : getDashDate();
+            const txt = d.logs.map(l => `${l.tech}\t${user}\t${config.shift}\t${date}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\tNO`).join('\n');
+            navigator.clipboard.writeText(txt); alert("Copied!");
         };
 
-        window.deleteHistory = async (id) => { if(confirm("Delete?")) { await db.collection("work_logs").doc(id).delete(); document.getElementById('historyBtn').click(); } };
+        window.delHist = async (id) => { if(confirm("Delete?")) { await db.collection("work_logs").doc(id).delete(); document.getElementById('historyBtn').click(); } };
 
         function initTaskModal() {
             const m = document.getElementById('modalMainCat'), s = document.getElementById('modalSubCat');
@@ -331,6 +332,11 @@
         document.getElementById('saveSettings').onclick = async () => {
             config = { tech: document.getElementById('cfgTech').value, shift: document.getElementById('cfgShift').value, in: document.getElementById('setIn').value, b1: document.getElementById('setB1').value, l: document.getElementById('setL').value, b2: document.getElementById('setB2').value, out: document.getElementById('setOut').value, autoWork: document.getElementById('autoWorkToggle').checked };
             await db.collection("settings").doc(user).set(config); alert("Settings saved!"); location.reload();
+        };
+
+        document.getElementById('mainCopyBtn').onclick = () => {
+            const txt = logs.map(l => `${l.tech}\t${user}\t${config.shift}\t${getDashDate()}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\tNO`).join('\n');
+            navigator.clipboard.writeText(txt); alert("Copied!");
         };
 
         document.getElementById('finishShiftBtn').onclick = async () => {
