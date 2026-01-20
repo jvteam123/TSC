@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Task Logger PRO | v3.5 Date Alignment</title>
+    <title>Task Logger PRO | v3.6 ISO Date</title>
     <script src="https://cdn.tailwindcss.com/3.4.3"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -17,8 +17,6 @@
         input, select { background-color: #0f172a !important; border: 1px solid #334155 !important; color: white !important; }
         .progress-container { height: 10px; background: #334155; border-radius: 5px; overflow: hidden; }
         #progressBar { height: 100%; width: 0%; transition: width 0.5s ease; }
-        .pilot-active { animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
         .time-cell:hover { cursor: pointer; text-decoration: underline; color: #60a5fa; }
     </style>
 </head>
@@ -38,7 +36,6 @@
                 <h1 class="text-2xl font-black text-white italic tracking-tighter">TASK LOGGER <span class="text-blue-500">PRO</span></h1>
                 <div class="flex items-center gap-2">
                     <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">User: <span id="userDisp" class="text-blue-400">...</span> | Tech: <span id="techDisp" class="text-blue-400">...</span></p>
-                    <span id="autoPilotBadge" class="hidden text-[9px] bg-indigo-600 text-white px-2 py-0.5 rounded-full font-black pilot-active uppercase">Auto-Pilot ON</span>
                 </div>
             </div>
             <div class="flex gap-2">
@@ -75,12 +72,13 @@
                     <tr>
                         <th class="px-6 py-4">Tech #</th>
                         <th class="px-6 py-4">Shift</th>
-                        <th class="px-6 py-4">Date</th> <th class="px-6 py-4 text-blue-400">In</th>
+                        <th class="px-6 py-4">Date (YYYY-MM-DD)</th>
+                        <th class="px-6 py-4 text-blue-400">In</th>
                         <th class="px-6 py-4 text-blue-400">Out</th>
                         <th class="px-6 py-4">Duration</th>
                         <th class="px-6 py-4">Category</th>
                         <th class="px-6 py-4">Sub-Category</th>
-                        <th class="px-6 py-4">OT Status</th>
+                        <th class="px-6 py-4">OT</th>
                         <th class="px-6 py-4 text-center">Action</th>
                     </tr>
                 </thead>
@@ -101,10 +99,6 @@
     <div id="settingsModal" class="modal fixed inset-0 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-700 p-8 rounded-[2rem] w-full max-w-2xl shadow-2xl">
             <h2 class="text-xl font-black mb-6 text-blue-400 uppercase tracking-widest text-center">Settings</h2>
-            <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700 mb-6 flex justify-between items-center">
-                <div><p class="font-bold text-sm">Auto-Pilot Mode</p></div>
-                <input type="checkbox" id="cfgAutoPilot" class="w-6 h-6 rounded accent-blue-500">
-            </div>
             <div class="grid grid-cols-2 gap-4 mb-6">
                 <div><label class="text-[10px] text-slate-500 font-bold uppercase">Tech ID</label><input type="text" id="cfgTech" class="w-full p-3 rounded-xl mt-1"></div>
                 <div><label class="text-[10px] text-slate-500 font-bold uppercase">Shift</label><select id="cfgShift" class="w-full p-3 rounded-xl mt-1"><option>Day</option><option>Night</option></select></div>
@@ -151,6 +145,7 @@
 
         let user = '', logs = [], config = {}, state = "IDLE", timerInterval, shiftFinished = false, isOT = false;
 
+        // FORMATTERS
         const t2S = (t) => { if(!t || t === '...') return 0; const p = t.split(':').map(Number); return (p[0]*3600) + (p[1]*60) + (p[2] || 0); };
         const fS = (s, randomize = false) => { 
             const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
@@ -160,7 +155,12 @@
         };
         const calcD = (s,e) => { let d = t2S(e) - t2S(s); if(d < 0) d += 86400; return fS(d); };
         const addRandomSeconds = (timeStr) => `${timeStr}:${String(Math.floor(Math.random() * 50) + 5).padStart(2, '0')}`;
-        const getEntryDate = () => new Date().toLocaleDateString();
+        
+        // DATE FORMATTER: 2026-01-20
+        const getISODate = () => {
+            const d = new Date();
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        };
 
         function render() {
             const body = document.getElementById('logBody');
@@ -173,7 +173,8 @@
                     <tr class="${i === 0 && state !== 'IDLE' ? 'active-row' : ''}">
                         <td class="px-6 py-4 font-bold text-slate-500">${l.tech}</td>
                         <td class="px-6 py-4 font-bold text-slate-400">${l.shiftName || config.shift}</td>
-                        <td class="px-6 py-4 font-bold text-indigo-400">${l.date}</td> <td class="px-6 py-4 text-blue-400 font-bold time-cell" onclick="mEdit(${i},'in')">${l.in}</td>
+                        <td class="px-6 py-4 font-bold text-indigo-400 font-mono">${l.date}</td>
+                        <td class="px-6 py-4 text-blue-400 font-bold time-cell" onclick="mEdit(${i},'in')">${l.in}</td>
                         <td class="px-6 py-4 text-blue-400 font-bold time-cell" onclick="mEdit(${i},'out')">${l.out}</td>
                         <td class="px-6 py-4 font-black">${l.dur}</td>
                         <td class="px-6 py-4 font-black text-blue-500">${l.main}</td>
@@ -196,8 +197,6 @@
             const bar = document.getElementById('progressBar');
             bar.style.width = percent + '%';
             document.getElementById('progressPercent').textContent = Math.floor(percent) + '%';
-            if (t >= SHIFT_GOAL) bar.classList.replace('bg-blue-500', 'bg-emerald-500');
-            else bar.classList.replace('bg-emerald-500', 'bg-blue-500');
         }
 
         function startSegment(newState, main, sub) {
@@ -208,7 +207,7 @@
             logs.unshift({ 
                 tech: config.tech, 
                 shiftName: config.shift,
-                date: getEntryDate(), // Capture Current Date
+                date: getISODate(), 
                 in: timeStr, 
                 out: "...", 
                 dur: "00:00:00", 
@@ -221,8 +220,7 @@
             document.getElementById('resetShiftBtn').classList.remove('hidden');
         }
 
-        // COPY OUTPUT ENGINE (Updated Arrangement)
-        // Order: TechNumber, Username, Shift, Date, Start Time, End Time, Hours, MainCategory, SubCategory, OT
+        // COPY OUTPUT (Exact Arrangement requested)
         document.getElementById('mainCopyBtn').onclick = () => {
             const txt = logs.map(l => 
                 `${config.tech}\t${user}\t${l.shiftName || config.shift}\t${l.date}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\t${l.main.includes('[OT]')?'YES':'NO'}`
@@ -238,7 +236,7 @@
             const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = `Logs_${user}.csv`; a.click();
         }
 
-        // LOGIN / FIREBASE
+        // FIREBASE & APP LOGIC
         document.getElementById('loginSubmit').onclick = async () => {
             user = document.getElementById('loginUsername').value.trim().toLowerCase();
             if(!user) return;
@@ -246,7 +244,7 @@
             document.getElementById('loginModal').classList.add('hidden');
             document.getElementById('mainApp').classList.remove('hidden');
             const snap = await db.collection("settings").doc(user).get();
-            config = snap.exists ? snap.data() : { tech: '0000', shift: 'Day', in: "06:00", b1: "08:30", l: "11:00", b2: "13:30", out: "15:00", autoPilot: false };
+            config = snap.exists ? snap.data() : { tech: '0000', shift: 'Day', in: "06:00", b1: "08:30", l: "11:00", b2: "13:30", out: "15:00" };
             document.getElementById('techDisp').textContent = config.tech;
             initTaskModal(); loadSession();
         };
@@ -344,25 +342,21 @@
 
         // HISTORY ENGINE
         document.getElementById('historyBtn').onclick = loadHistory;
-
         async function loadHistory() {
             const list = document.getElementById('historyList');
             list.innerHTML = 'Loading records...';
             document.getElementById('historyModal').classList.remove('hidden');
             const snap = await db.collection("work_logs").where("user", "==", user).orderBy("timestamp", "desc").limit(15).get();
-            list.innerHTML = snap.empty ? 'No records found.' : '';
+            list.innerHTML = snap.empty ? 'No records.' : '';
             snap.forEach(doc => {
                 const d = doc.data();
                 const div = document.createElement('div');
                 div.className = "bg-slate-800 p-4 rounded-xl flex justify-between items-center mb-2 border border-slate-700";
                 div.innerHTML = `
-                    <div>
-                        <p class="font-black text-blue-400">${d.timestamp ? d.timestamp.toDate().toLocaleDateString() : 'N/A'}</p>
-                        <p class="text-[10px] text-slate-500">${d.logs.length} Tasks</p>
-                    </div>
+                    <div><p class="font-black text-blue-400">${d.timestamp ? d.timestamp.toDate().toLocaleDateString() : 'N/A'}</p><p class="text-[10px] text-slate-500">${d.logs.length} Tasks</p></div>
                     <div class="flex gap-2">
                         <button onclick="copyHistory('${doc.id}')" class="bg-blue-600 px-4 py-2 rounded-lg text-xs font-bold">COPY</button>
-                        <button onclick="deleteHistory('${doc.id}')" class="bg-red-600/20 text-red-500 border border-red-500/30 px-3 py-2 rounded-lg text-xs hover:bg-red-600 hover:text-white">🗑️</button>
+                        <button onclick="deleteHistory('${doc.id}')" class="bg-red-600/20 text-red-500 border border-red-500/30 px-3 py-2 rounded-lg text-xs">🗑️</button>
                     </div>`;
                 list.append(div);
                 div.dataset.logData = JSON.stringify(d.logs);
@@ -376,18 +370,17 @@
                 `${config.tech}\t${user}\t${l.shiftName || config.shift}\t${l.date}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\t${l.main.includes('[OT]')?'YES':'NO'}`
             ).join('\n');
             navigator.clipboard.writeText(txt);
-            btn.textContent = "COPIED!";
-            setTimeout(() => btn.textContent = "COPY", 2000);
+            btn.textContent = "COPIED!"; setTimeout(() => btn.textContent = "COPY", 2000);
         };
 
         window.deleteHistory = async (id) => {
-            if(!confirm("PERMANENTLY DELETE this record?")) return;
+            if(!confirm("DELETE record?")) return;
             await db.collection("work_logs").doc(id).delete();
             loadHistory();
         };
 
         document.getElementById('saveSettings').onclick = async () => {
-            config = { tech: document.getElementById('cfgTech').value, shift: document.getElementById('cfgShift').value, in: document.getElementById('setIn').value, b1: document.getElementById('setB1').value, l: document.getElementById('setL').value, b2: document.getElementById('setB2').value, out: document.getElementById('setOut').value, autoPilot: document.getElementById('cfgAutoPilot').checked };
+            config = { tech: document.getElementById('cfgTech').value, shift: document.getElementById('cfgShift').value, in: document.getElementById('setIn').value, b1: document.getElementById('setB1').value, l: document.getElementById('setL').value, b2: document.getElementById('setB2').value, out: document.getElementById('setOut').value };
             await db.collection("settings").doc(user).set(config);
             document.getElementById('settingsModal').classList.add('hidden');
             document.getElementById('techDisp').textContent = config.tech;
