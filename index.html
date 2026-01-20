@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Logger | Full Production v1.5</title>
+    <title>Pro Logger | Production v1.5.1</title>
     <script src="https://cdn.tailwindcss.com/3.4.3"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -16,7 +16,7 @@
         .active-row { background-color: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; }
         input, select { background-color: #0f172a !important; border: 1px solid #334155 !important; color: white !important; }
         button:disabled { opacity: 0.3; cursor: not-allowed; filter: grayscale(1); }
-        .history-card { background: #1e293b; border: 1px solid #334155; transition: all 0.2s; }
+        .history-card { background: #1e293b; border: 1px solid #334155; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -87,10 +87,10 @@
     </div>
 
     <div id="historyModal" class="modal fixed inset-0 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-slate-700 p-8 rounded-[2rem] w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
+        <div class="bg-slate-900 border border-slate-700 p-8 rounded-[2rem] w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-xl font-black text-blue-400 uppercase">Work History</h2>
-                <button onclick="document.getElementById('historyModal').classList.add('hidden')" class="text-slate-500 hover:text-white text-2xl">✕</button>
+                <button onclick="document.getElementById('historyModal').classList.add('hidden')" class="text-slate-500 text-2xl">✕</button>
             </div>
             <div id="historyList" class="flex-1 overflow-y-auto space-y-4 pr-2"></div>
         </div>
@@ -145,6 +145,15 @@
 
         const getDashDate = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
+        // CORE LOGIC
+        function checkAutoTimeTrigger() {
+            if (!config.autoWork || state === "IDLE") return;
+            const now = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit' });
+            if ([config.b1, config.l, config.b2].includes(now) && state !== "BREAK") {
+                startNewSegment("BREAK", "BREAK", "BREAK");
+            }
+        }
+
         function saveSession() {
             if(!user) return;
             localStorage.setItem(`activeLogs_${user}`, JSON.stringify(logs));
@@ -181,7 +190,8 @@
             config = snap.exists ? snap.data() : { tech: '7236', shift: 'Day', in: "06:00", b1: "08:30", l: "11:00", b2: "13:30", out: "15:00", autoWork: false };
             document.getElementById('techDisp').textContent = config.tech;
             initTaskModal(); loadSession(); render();
-            if(config.autoWork) monitorInterval = setInterval(checkAutoTimeTrigger, 30000);
+            if (monitorInterval) clearInterval(monitorInterval);
+            monitorInterval = setInterval(checkAutoTimeTrigger, 30000);
         };
 
         function startNewSegment(newState, main, sub) {
@@ -194,7 +204,7 @@
             document.getElementById('finishShiftBtn').classList.remove('hidden');
         }
 
-        // Action Logic
+        // --- THE MAGIC WAND & FIX ---
         window.autofixRow = (i) => {
             const row = logs[i];
             if(i === logs.length - 1) row.in = config.in;
@@ -218,34 +228,10 @@
                     lastWork.dur = calcD(lastWork.in, lastWork.out);
                 }
             }
-            render(); saveSession(); alert("Synced!");
+            render(); saveSession(); alert("Shift Synced to 07:30:00");
         };
 
-        // History RESTORED
-        document.getElementById('historyBtn').onclick = async () => {
-            const list = document.getElementById('historyList');
-            list.innerHTML = '<p class="text-center py-10">Loading...</p>';
-            document.getElementById('historyModal').classList.remove('hidden');
-            const snap = await db.collection("work_logs").where("user", "==", user).orderBy("timestamp", "desc").limit(10).get();
-            list.innerHTML = snap.empty ? '<p class="text-center">No logs.</p>' : '';
-            snap.forEach(docSnap => {
-                const d = docSnap.data();
-                const div = document.createElement('div');
-                div.className = "history-card p-5 rounded-2xl flex justify-between items-center";
-                div.innerHTML = `<div><span class="font-bold text-blue-400">${getDashDate(d.timestamp?.toDate())}</span></div>
-                    <div class="flex gap-2"><button onclick="copyHist('${docSnap.id}')" class="bg-blue-600 px-3 py-1 rounded text-xs">COPY</button>
-                    <button onclick="delHist('${docSnap.id}')" class="bg-red-600 px-3 py-1 rounded text-xs">DEL</button></div>`;
-                list.appendChild(div);
-            });
-        };
-        window.copyHist = async (id) => {
-            const d = (await db.collection("work_logs").doc(id).get()).data();
-            const txt = d.logs.map(l => `${l.tech}\t${user}\t${config.shift}\t${getDashDate()}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\tNO`).join('\n');
-            navigator.clipboard.writeText(txt); alert("Copied!");
-        };
-        window.delHist = async (id) => { if(confirm("Del?")) { await db.collection("work_logs").doc(id).delete(); document.getElementById('historyBtn').click(); } };
-
-        // Helper & UI Logic
+        // UI RENDER
         function render() {
             const body = document.getElementById('logBody');
             const empty = document.getElementById('emptyState');
@@ -270,6 +256,12 @@
             updateTotal();
         }
 
+        // HELPERS
+        function t2S(t) { if(!t || t === '...') return 0; const p = t.split(':').map(Number); return (p[0]*3600) + (p[1]*60) + (p[2] || 0); }
+        function fS(s) { const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sc=s%60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`; }
+        function calcD(s,e) { let d = t2S(e) - t2S(s); if(d<0) d += 86400; return fS(d); }
+        function updateTotal() { let t = 0; logs.forEach(l => { if(l.main !== 'BREAK' && l.dur !== '...') t += t2S(l.dur); }); document.getElementById('totalWorkTime').textContent = fS(t); }
+
         function startTimer() {
             clearInterval(timerInterval);
             timerInterval = setInterval(() => {
@@ -281,11 +273,6 @@
                 }
             }, 1000);
         }
-
-        function t2S(t) { if(!t || t === '...') return 0; const p = t.split(':').map(Number); return (p[0]*3600) + (p[1]*60) + (p[2] || 0); }
-        function fS(s) { const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sc=s%60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`; }
-        function calcD(s,e) { let d = t2S(e) - t2S(s); if(d<0) d += 86400; return fS(d); }
-        function updateTotal() { let t = 0; logs.forEach(l => { if(l.main !== 'BREAK' && l.dur !== '...') t += t2S(l.dur); }); document.getElementById('totalWorkTime').textContent = fS(t); }
 
         function updateUI() {
             const btn = document.getElementById('mainActionButton');
@@ -300,7 +287,18 @@
             m.onchange();
         }
 
-        // Settings RESTORED
+        // MODAL HANDLERS
+        document.getElementById('mainActionButton').onclick = () => {
+            if (shiftFinished) return alert("Shift finished.");
+            if (state === "IDLE" || state === "BREAK") document.getElementById('taskModal').classList.remove('hidden');
+            else startNewSegment("BREAK", "BREAK", "BREAK");
+        };
+
+        document.getElementById('confirmTask').onclick = () => {
+            startNewSegment("WORKING", document.getElementById('modalMainCat').value, document.getElementById('modalSubCat').value);
+            document.getElementById('taskModal').classList.add('hidden');
+        };
+
         document.getElementById('settingsBtn').onclick = () => {
             document.getElementById('cfgTech').value = config.tech; document.getElementById('cfgShift').value = config.shift;
             document.getElementById('autoWorkToggle').checked = config.autoWork; document.getElementById('setIn').value = config.in;
@@ -308,13 +306,14 @@
             document.getElementById('setB2').value = config.b2; document.getElementById('setOut').value = config.out;
             document.getElementById('settingsModal').classList.remove('hidden');
         };
+
         document.getElementById('saveSettings').onclick = async () => {
             config = { tech: document.getElementById('cfgTech').value, shift: document.getElementById('cfgShift').value, autoWork: document.getElementById('autoWorkToggle').checked, in: document.getElementById('setIn').value, b1: document.getElementById('setB1').value, l: document.getElementById('setL').value, b2: document.getElementById('setB2').value, out: document.getElementById('setOut').value };
             await db.collection("settings").doc(user).set(config); location.reload();
         };
 
         document.getElementById('finishShiftBtn').onclick = () => {
-            if(!confirm("Finish?")) return;
+            if(!confirm("End Shift?")) return;
             const now = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit' });
             if(logs.length > 0) { logs[0].out = now; logs[0].dur = calcD(logs[0].in, logs[0].out); }
             shiftFinished = true; state = "IDLE"; clearInterval(timerInterval);
@@ -322,6 +321,31 @@
             document.getElementById('lockStatus').textContent = "Ready: 07:30 Sync Enabled";
             saveSession(); render(); updateUI();
         };
+
+        document.getElementById('historyBtn').onclick = async () => {
+            const list = document.getElementById('historyList');
+            list.innerHTML = '<p class="text-center py-10">Loading...</p>';
+            document.getElementById('historyModal').classList.remove('hidden');
+            const snap = await db.collection("work_logs").where("user", "==", user).orderBy("timestamp", "desc").limit(10).get();
+            list.innerHTML = snap.empty ? '<p class="text-center">No logs.</p>' : '';
+            snap.forEach(docSnap => {
+                const d = docSnap.data();
+                const div = document.createElement('div');
+                div.className = "history-card p-5 rounded-2xl flex justify-between items-center";
+                div.innerHTML = `<div><span class="font-bold text-blue-400">${getDashDate(d.timestamp?.toDate())}</span></div>
+                    <div class="flex gap-2"><button onclick="copyHist('${docSnap.id}')" class="bg-blue-600 px-3 py-1 rounded text-xs">COPY</button>
+                    <button onclick="delHist('${docSnap.id}')" class="bg-red-600 px-3 py-1 rounded text-xs">DEL</button></div>`;
+                list.appendChild(div);
+            });
+        };
+
+        window.copyHist = async (id) => {
+            const d = (await db.collection("work_logs").doc(id).get()).data();
+            const txt = d.logs.map(l => `${l.tech}\t${user}\t${config.shift}\t${getDashDate()}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\tNO`).join('\n');
+            navigator.clipboard.writeText(txt); alert("Copied!");
+        };
+
+        window.delHist = async (id) => { if(confirm("Delete record?")) { await db.collection("work_logs").doc(id).delete(); document.getElementById('historyBtn').click(); } };
 
         document.getElementById('mainCopyBtn').onclick = () => {
             const txt = logs.map(l => `${l.tech}\t${user}\t${config.shift}\t${getDashDate()}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\tNO`).join('\n');
