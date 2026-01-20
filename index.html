@@ -19,6 +19,7 @@
         #progressBar { height: 100%; width: 0%; transition: width 0.5s ease, background-color 0.5s ease; }
         .history-card { background: #1e293b; border: 1px solid #334155; }
         .time-cell:hover { cursor: pointer; text-decoration: underline; color: #60a5fa; }
+        #globalFixBtn:disabled { opacity: 0.3; cursor: not-allowed; filter: grayscale(1); }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -247,6 +248,10 @@
             saveSession(); updateUI(); startTimer(); render();
             document.getElementById('finishShiftBtn').classList.remove('hidden');
             document.getElementById('resetShiftBtn').classList.remove('hidden');
+            
+            // Disable AutoSync when a new shift/task starts
+            document.getElementById('globalFixBtn').disabled = true;
+            document.getElementById('lockStatus').textContent = "Finish Shift first";
         }
 
         document.getElementById('startOTBtn').onclick = () => {
@@ -346,7 +351,10 @@
 
         function updateUI() {
             const btn = document.getElementById('mainActionButton');
-            if (shiftFinished) { btn.textContent = "NEW SHIFT"; btn.className = "bg-emerald-600 text-white px-8 py-4 rounded-xl font-black"; }
+            if (shiftFinished) { 
+                btn.textContent = "NEW SHIFT"; 
+                btn.className = "bg-emerald-600 text-white px-8 py-4 rounded-xl font-black"; 
+            }
             else {
                 btn.textContent = state === "WORKING" ? "GO TO BREAK" : (state === "IDLE" ? "START WORK" : "RESUME WORK");
                 btn.className = state === "WORKING" ? "bg-amber-500 text-white px-8 py-4 rounded-xl font-black" : "bg-blue-600 text-white px-8 py-4 rounded-xl font-black";
@@ -359,14 +367,37 @@
             if (sLogs) { logs = JSON.parse(sLogs); logs.forEach(l => { if(l.rawStart) l.rawStart = new Date(l.rawStart); }); }
             state = localStorage.getItem(`state_${user}`) || "IDLE";
             shiftFinished = localStorage.getItem(`finished_${user}`) === "true";
-            if (shiftFinished) { document.getElementById('globalFixBtn').disabled = false; document.getElementById('lockStatus').textContent = "Sync Ready"; }
-            if (state !== "IDLE" || logs.length > 0) { startTimer(); updateUI(); document.getElementById('finishShiftBtn').classList.remove('hidden'); document.getElementById('resetShiftBtn').classList.remove('hidden'); }
+            
+            const syncBtn = document.getElementById('globalFixBtn');
+            if (shiftFinished) { 
+                syncBtn.disabled = false; 
+                document.getElementById('lockStatus').textContent = "Sync Ready"; 
+            } else {
+                syncBtn.disabled = true;
+                document.getElementById('lockStatus').textContent = "Finish Shift first";
+            }
+            
+            if (state !== "IDLE" || logs.length > 0) { 
+                startTimer(); updateUI(); 
+                document.getElementById('finishShiftBtn').classList.remove('hidden'); 
+                document.getElementById('resetShiftBtn').classList.remove('hidden'); 
+            }
             render();
         }
 
         document.getElementById('mainActionButton').onclick = () => {
-            if (shiftFinished) { logs = []; shiftFinished = false; saveSession(); }
-            if (state === "IDLE" || state === "BREAK") { isOT = false; document.getElementById('taskModalHeader').textContent = "Select Task"; document.getElementById('taskModal').classList.remove('hidden'); }
+            if (shiftFinished) { 
+                logs = []; 
+                shiftFinished = false; 
+                document.getElementById('globalFixBtn').disabled = true;
+                document.getElementById('lockStatus').textContent = "Finish Shift first";
+                saveSession(); 
+            }
+            if (state === "IDLE" || state === "BREAK") { 
+                isOT = false; 
+                document.getElementById('taskModalHeader').textContent = "Select Task"; 
+                document.getElementById('taskModal').classList.remove('hidden'); 
+            }
             else startNewSegment("BREAK", "BREAK", "BREAK");
         };
 
@@ -383,17 +414,30 @@
             const timeStr = fS((now.getHours() * 3600) + (now.getMinutes() * 60), true);
             if(logs.length > 0 && logs[0].out === "...") { logs[0].out = timeStr; logs[0].dur = calcD(logs[0].in, logs[0].out); }
             shiftFinished = true; state = "IDLE";
+            
+            // Enable AutoSync after shift is finished
             document.getElementById('globalFixBtn').disabled = false;
             document.getElementById('lockStatus').textContent = "Sync Ready";
+            
             saveSession(); render(); updateUI();
             await db.collection("work_logs").add({ user, logs, tech: config.tech, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
         };
 
-        document.getElementById('resetShiftBtn').onclick = () => { if(confirm("Wipe logs?")) { logs = []; state = "IDLE"; shiftFinished = false; saveSession(); render(); updateUI(); } };
+        document.getElementById('resetShiftBtn').onclick = () => { 
+            if(confirm("Wipe logs?")) { 
+                logs = []; state = "IDLE"; shiftFinished = false; 
+                document.getElementById('globalFixBtn').disabled = true;
+                document.getElementById('lockStatus').textContent = "Finish Shift first";
+                saveSession(); render(); updateUI(); 
+            } 
+        };
         
         document.getElementById('globalFixBtn').onclick = () => {
             if (!logs.length) return;
+            // 1. Set first log to Start Time from Settings
             logs[logs.length-1].in = addRandomSeconds(config.in);
+            
+            // 2. Adjust last log to hit SHIFT_GOAL (07:30:00) excluding OT
             let workSec = 0;
             for(let i=1; i<logs.length; i++) {
                 if(logs[i].main !== 'BREAK' && !logs[i].main.includes('[OT]')) workSec += t2S(logs[i].dur);
@@ -403,6 +447,8 @@
                 logs[0].out = fS(t2S(logs[0].in) + needed, true);
                 logs[0].dur = calcD(logs[0].in, logs[0].out);
             }
+
+            // 3. Chain sync gaps so Out time of previous log = In time of current
             for(let i=logs.length-2; i>=0; i--) {
                 logs[i].in = logs[i+1].out;
                 if(logs[i].out !== "...") logs[i].dur = calcD(logs[i].in, logs[i].out);
