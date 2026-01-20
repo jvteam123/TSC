@@ -309,7 +309,7 @@
                     copyBtn.className = "bg-blue-600 px-4 py-2 rounded-lg font-bold text-xs hover:bg-blue-500";
                     copyBtn.textContent = "COPY";
                     copyBtn.onclick = () => {
-                        const txt = d.logs.map(l => `${l.tech}\t${user}\t${config.shift}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}`).join('\n');
+                        const txt = d.logs.map(l => `${l.tech}\t${user}\t${config.shift}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}`).join('\n');
                         navigator.clipboard.writeText(txt); alert("Shift logs copied!");
                     };
 
@@ -393,10 +393,7 @@
         
         document.getElementById('globalFixBtn').onclick = () => {
             if (!logs.length) return;
-            // 1. Set first log to Start Time
             logs[logs.length-1].in = addRandomSeconds(config.in);
-            
-            // 2. Adjust last log to hit SHIFT_GOAL (07:30:00)
             let workSec = 0;
             for(let i=1; i<logs.length; i++) {
                 if(logs[i].main !== 'BREAK' && !logs[i].main.includes('[OT]')) workSec += t2S(logs[i].dur);
@@ -406,8 +403,6 @@
                 logs[0].out = fS(t2S(logs[0].in) + needed, true);
                 logs[0].dur = calcD(logs[0].in, logs[0].out);
             }
-
-            // 3. Chain sync gaps
             for(let i=logs.length-2; i>=0; i--) {
                 logs[i].in = logs[i+1].out;
                 if(logs[i].out !== "...") logs[i].dur = calcD(logs[i].in, logs[i].out);
@@ -431,7 +426,7 @@
         }
 
         document.getElementById('mainCopyBtn').onclick = () => {
-            const txt = logs.map(l => `${l.tech}\t${user}\t${config.shift}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}`).join('\n');
+            const txt = logs.map(l => `${l.tech}\t${user}\t${config.shift}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}`).join('\n');
             navigator.clipboard.writeText(txt); alert("Copied!");
         };
     </script>
