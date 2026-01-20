@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Task Logger PRO | v3.6 ISO Date</title>
+    <title>Task Logger PRO | v3.8 Final Release</title>
     <script src="https://cdn.tailwindcss.com/3.4.3"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -18,6 +18,7 @@
         .progress-container { height: 10px; background: #334155; border-radius: 5px; overflow: hidden; }
         #progressBar { height: 100%; width: 0%; transition: width 0.5s ease; }
         .time-cell:hover { cursor: pointer; text-decoration: underline; color: #60a5fa; }
+        button:disabled { opacity: 0.3; cursor: not-allowed; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -34,9 +35,7 @@
         <div class="flex justify-between items-center mb-4">
             <div>
                 <h1 class="text-2xl font-black text-white italic tracking-tighter">TASK LOGGER <span class="text-blue-500">PRO</span></h1>
-                <div class="flex items-center gap-2">
-                    <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">User: <span id="userDisp" class="text-blue-400">...</span> | Tech: <span id="techDisp" class="text-blue-400">...</span></p>
-                </div>
+                <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">User: <span id="userDisp" class="text-blue-400">...</span> | Tech: <span id="techDisp" class="text-blue-400">...</span></p>
             </div>
             <div class="flex gap-2">
                 <button onclick="exportToCSV()" class="bg-emerald-600/20 text-emerald-500 border border-emerald-500/30 px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-600 hover:text-white transition-all">📥 CSV</button>
@@ -61,7 +60,7 @@
                 <button id="resetShiftBtn" class="bg-red-600/20 text-red-500 border border-red-500/30 hover:bg-red-600 hover:text-white px-4 py-4 rounded-2xl font-bold hidden text-xs uppercase">Reset</button>
             </div>
             <div class="flex items-center gap-6 text-right">
-                <div><p class="text-[10px] text-slate-500 font-black uppercase">Live Duration</p><p id="liveClock" class="text-3xl font-mono font-bold text-blue-400">00:00:00</p></div>
+                <div><p class="text-[10px] text-slate-500 font-black uppercase">Live Segment</p><p id="liveClock" class="text-3xl font-mono font-bold text-blue-400">00:00:00</p></div>
                 <div class="border-l border-slate-700 pl-6"><p class="text-[10px] text-slate-500 font-black uppercase">Shift Total</p><p id="totalWorkTime" class="text-xl font-mono font-bold text-emerald-400">00:00:00</p></div>
             </div>
         </div>
@@ -72,10 +71,10 @@
                     <tr>
                         <th class="px-6 py-4">Tech #</th>
                         <th class="px-6 py-4">Shift</th>
-                        <th class="px-6 py-4">Date (YYYY-MM-DD)</th>
+                        <th class="px-6 py-4">Date</th>
                         <th class="px-6 py-4 text-blue-400">In</th>
                         <th class="px-6 py-4 text-blue-400">Out</th>
-                        <th class="px-6 py-4">Duration</th>
+                        <th class="px-6 py-4">Hours</th>
                         <th class="px-6 py-4">Category</th>
                         <th class="px-6 py-4">Sub-Category</th>
                         <th class="px-6 py-4">OT</th>
@@ -103,6 +102,7 @@
                 <div><label class="text-[10px] text-slate-500 font-bold uppercase">Tech ID</label><input type="text" id="cfgTech" class="w-full p-3 rounded-xl mt-1"></div>
                 <div><label class="text-[10px] text-slate-500 font-bold uppercase">Shift</label><select id="cfgShift" class="w-full p-3 rounded-xl mt-1"><option>Day</option><option>Night</option></select></div>
             </div>
+            <p class="text-[10px] text-slate-500 font-black uppercase mb-2">Default Shift Schedule</p>
             <div class="grid grid-cols-5 gap-2 mb-8">
                 <div><label class="text-[9px] text-slate-500">In</label><input type="time" id="setIn" class="w-full p-2 text-xs rounded-lg"></div>
                 <div><label class="text-[9px] text-slate-500">B1</label><input type="time" id="setB1" class="w-full p-2 text-xs rounded-lg"></div>
@@ -112,7 +112,7 @@
             </div>
             <div class="flex gap-4">
                 <button onclick="document.getElementById('settingsModal').classList.add('hidden')" class="w-full bg-slate-700 py-4 rounded-xl font-black">Cancel</button>
-                <button id="saveSettings" class="w-full bg-blue-600 py-4 rounded-xl font-black">Save</button>
+                <button id="saveSettings" class="w-full bg-blue-600 py-4 rounded-xl font-black">Save Settings</button>
             </div>
         </div>
     </div>
@@ -136,6 +136,7 @@
     </div>
 
     <script>
+        // CONFIG & CORE
         const firebaseConfig = { apiKey: "AIzaSyAlFMmWOPmRZg8QCXS9NSORiVIRUFj59LU", authDomain: "tscm-547ea.firebaseapp.com", projectId: "tscm-547ea", storageBucket: "tscm-547ea.firebasestorage.app", messagingSenderId: "898083203071", appId: "1:898083203071:web:b2134307b5ad610dfce9ca" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
@@ -155,12 +156,7 @@
         };
         const calcD = (s,e) => { let d = t2S(e) - t2S(s); if(d < 0) d += 86400; return fS(d); };
         const addRandomSeconds = (timeStr) => `${timeStr}:${String(Math.floor(Math.random() * 50) + 5).padStart(2, '0')}`;
-        
-        // DATE FORMATTER: 2026-01-20
-        const getISODate = () => {
-            const d = new Date();
-            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-        };
+        const getISODate = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 
         function render() {
             const body = document.getElementById('logBody');
@@ -169,8 +165,7 @@
                 document.getElementById('emptyState').classList.add('hidden');
                 body.innerHTML = logs.map((l, i) => {
                     const isOTEntry = l.main.includes('[OT]');
-                    return `
-                    <tr class="${i === 0 && state !== 'IDLE' ? 'active-row' : ''}">
+                    return `<tr class="${i === 0 && state !== 'IDLE' ? 'active-row' : ''}">
                         <td class="px-6 py-4 font-bold text-slate-500">${l.tech}</td>
                         <td class="px-6 py-4 font-bold text-slate-400">${l.shiftName || config.shift}</td>
                         <td class="px-6 py-4 font-bold text-indigo-400 font-mono">${l.date}</td>
@@ -194,8 +189,7 @@
             let t = 0; logs.forEach(l => { if(l.main !== 'BREAK' && !l.main.includes('[OT]') && l.dur !== '...') t += t2S(l.dur); });
             document.getElementById('totalWorkTime').textContent = fS(t);
             const percent = Math.min((t / SHIFT_GOAL) * 100, 100);
-            const bar = document.getElementById('progressBar');
-            bar.style.width = percent + '%';
+            document.getElementById('progressBar').style.width = percent + '%';
             document.getElementById('progressPercent').textContent = Math.floor(percent) + '%';
         }
 
@@ -204,39 +198,16 @@
             const timeStr = fS((now.getHours() * 3600) + (now.getMinutes() * 60), true);
             if (logs.length > 0 && logs[0].out === "...") { logs[0].out = timeStr; logs[0].dur = calcD(logs[0].in, logs[0].out); }
             state = newState;
-            logs.unshift({ 
-                tech: config.tech, 
-                shiftName: config.shift,
-                date: getISODate(), 
-                in: timeStr, 
-                out: "...", 
-                dur: "00:00:00", 
-                main: main, 
-                sub: sub, 
-                rawStart: now 
-            });
+            logs.unshift({ tech: config.tech, shiftName: config.shift, date: getISODate(), in: timeStr, out: "...", dur: "00:00:00", main: main, sub: sub, rawStart: now });
             saveSession(); updateUI(); startTimer(); render();
             document.getElementById('finishShiftBtn').classList.remove('hidden');
             document.getElementById('resetShiftBtn').classList.remove('hidden');
+            document.getElementById('startOTBtn').classList.add('hidden');
+            document.getElementById('globalFixBtn').disabled = true;
+            document.getElementById('lockStatus').textContent = "Finish Shift first";
         }
 
-        // COPY OUTPUT (Exact Arrangement requested)
-        document.getElementById('mainCopyBtn').onclick = () => {
-            const txt = logs.map(l => 
-                `${config.tech}\t${user}\t${l.shiftName || config.shift}\t${l.date}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\t${l.main.includes('[OT]')?'YES':'NO'}`
-            ).join('\n');
-            navigator.clipboard.writeText(txt); alert("Copied for Spreadsheet!");
-        };
-
-        function exportToCSV() {
-            let csv = "TechNumber,Username,Shift,Date,StartTime,EndTime,Hours,MainCategory,SubCategory,OT\n";
-            logs.forEach(l => { 
-                csv += `${config.tech},${user},${l.shiftName || config.shift},${l.date},${l.in},${l.out},${l.dur},"${l.main}","${l.sub}",${l.main.includes('[OT]')?'YES':'NO'}\n`; 
-            });
-            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = `Logs_${user}.csv`; a.click();
-        }
-
-        // FIREBASE & APP LOGIC
+        // BUTTON LOGIC
         document.getElementById('loginSubmit').onclick = async () => {
             user = document.getElementById('loginUsername').value.trim().toLowerCase();
             if(!user) return;
@@ -250,7 +221,7 @@
         };
 
         document.getElementById('mainActionButton').onclick = () => {
-            if (shiftFinished) { if(confirm("Start new shift?")) { logs = []; shiftFinished = false; isOT = false; saveSession(); } else return; }
+            if (shiftFinished) { if(confirm("Start new shift?")) { logs = []; shiftFinished = false; isOT = false; saveSession(); render(); updateUI(); } else return; }
             if (state === "IDLE" || state === "BREAK") { isOT = false; document.getElementById('taskModalHeader').textContent = "Select Task"; document.getElementById('taskModal').classList.remove('hidden'); }
             else startSegment("BREAK", "BREAK", "BREAK");
         };
@@ -261,7 +232,6 @@
             const m = document.getElementById('modalMainCat').value, s = document.getElementById('modalSubCat').value;
             startSegment("WORKING", isOT ? `[OT] ${m}` : m, s);
             document.getElementById('taskModal').classList.add('hidden');
-            document.getElementById('startOTBtn').classList.add('hidden');
         };
 
         document.getElementById('finishShiftBtn').onclick = async () => {
@@ -277,17 +247,28 @@
             await db.collection("work_logs").add({ user, logs, tech: config.tech, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
         };
 
+        document.getElementById('resetShiftBtn').onclick = () => { 
+            if(confirm("Reset current shift?")) { 
+                logs=[]; state="IDLE"; shiftFinished=false; 
+                document.getElementById('globalFixBtn').disabled = true;
+                document.getElementById('startOTBtn').classList.add('hidden');
+                document.getElementById('lockStatus').textContent = "Finish Shift first";
+                saveSession(); render(); updateUI(); 
+            } 
+        };
+
         document.getElementById('globalFixBtn').onclick = () => {
             if (!logs.length) return;
             logs[logs.length-1].in = addRandomSeconds(config.in);
             let workSec = 0;
-            for(let i=1; i<logs.length; i++) { if(logs[i].main !== 'BREAK' && !logs[i].main.includes('[OT]')) workSec += t2S(logs[i].dur); }
+            for(let i=1; i<logs.length; i++) { if(l = logs[i], l.main !== 'BREAK' && !l.main.includes('[OT]')) workSec += t2S(l.dur); }
             const needed = SHIFT_GOAL - workSec;
             if(needed > 0) { logs[0].out = fS(t2S(logs[0].in) + needed, true); logs[0].dur = calcD(logs[0].in, logs[0].out); }
             for(let i=logs.length-2; i>=0; i--) { logs[i].in = logs[i+1].out; if(logs[i].out !== "...") logs[i].dur = calcD(logs[i].in, logs[i].out); }
-            render(); saveSession(); alert("Auto-Sync Done.");
+            render(); saveSession(); alert("Auto-Sync Complete.");
         };
 
+        // UI HELPERS
         function updateUI() {
             const btn = document.getElementById('mainActionButton');
             if (shiftFinished) { btn.textContent = "NEW SHIFT"; btn.className = "bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black"; }
@@ -296,26 +277,14 @@
                 btn.className = state === "WORKING" ? "bg-amber-500 text-white px-8 py-4 rounded-2xl font-black" : "bg-blue-600 text-white px-8 py-4 rounded-2xl font-black";
             }
         }
-
-        function startTimer() {
-            clearInterval(timerInterval);
-            timerInterval = setInterval(() => {
-                if (logs.length > 0 && state !== 'IDLE') {
-                    const diff = Math.floor((new Date() - logs[0].rawStart)/1000);
-                    logs[0].dur = fS(diff);
-                    document.getElementById('liveClock').textContent = fS(diff);
-                }
-                updateTotal();
-            }, 1000);
-        }
-
+        function startTimer() { clearInterval(timerInterval); timerInterval = setInterval(() => { if (logs.length > 0 && state !== 'IDLE') { const diff = Math.floor((new Date() - logs[0].rawStart)/1000); logs[0].dur = fS(diff); document.getElementById('liveClock').textContent = fS(diff); } updateTotal(); }, 1000); }
         function saveSession() { if(user) { localStorage.setItem(`logs_${user}`, JSON.stringify(logs)); localStorage.setItem(`state_${user}`, state); localStorage.setItem(`finished_${user}`, shiftFinished); } }
         function loadSession() {
             const sLogs = localStorage.getItem(`logs_${user}`);
             if (sLogs) { logs = JSON.parse(sLogs); logs.forEach(l => { if(l.rawStart) l.rawStart = new Date(l.rawStart); }); }
             state = localStorage.getItem(`state_${user}`) || "IDLE";
             shiftFinished = localStorage.getItem(`finished_${user}`) === "true";
-            if (shiftFinished) { document.getElementById('globalFixBtn').disabled = false; document.getElementById('startOTBtn').classList.remove('hidden'); }
+            if (shiftFinished) { document.getElementById('globalFixBtn').disabled = false; document.getElementById('startOTBtn').classList.remove('hidden'); document.getElementById('lockStatus').textContent = "Ready to Sync"; }
             if (state !== "IDLE" || logs.length > 0) { startTimer(); updateUI(); document.getElementById('finishShiftBtn').classList.remove('hidden'); document.getElementById('resetShiftBtn').classList.remove('hidden'); }
             render();
         }
@@ -327,79 +296,53 @@
                 if (bIdx === 1) log.in = addRandomSeconds(config.b1);
                 else if (bIdx === 2) log.in = addRandomSeconds(config.l);
                 else if (bIdx === 3) log.in = addRandomSeconds(config.b2);
-            } else {
-                if (i === logs.length - 1) log.in = addRandomSeconds(config.in);
-                else log.in = logs[i+1].out;
-            }
+            } else { if (i === logs.length - 1) log.in = addRandomSeconds(config.in); else log.in = logs[i+1].out; }
             if (log.out !== "...") log.dur = calcD(log.in, log.out);
             render(); saveSession();
         };
 
-        window.mEdit = (i, f) => {
-            const v = prompt(`Edit ${f.toUpperCase()}:`, logs[i][f]);
-            if (v) { logs[i][f] = v; if(logs[i].out !== "...") logs[i].dur = calcD(logs[i].in, logs[i].out); render(); saveSession(); }
+        window.mEdit = (i, f) => { const v = prompt(`Edit ${f.toUpperCase()}:`, logs[i][f]); if (v) { logs[i][f] = v; if(logs[i].out !== "...") logs[i].dur = calcD(logs[i].in, logs[i].out); render(); saveSession(); } };
+
+        // DATA EXPORT (THE ARRANGEMENT)
+        document.getElementById('mainCopyBtn').onclick = () => {
+            const txt = logs.map(l => `${config.tech}\t${user}\t${l.shiftName || config.shift}\t${l.date}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\t${l.main.includes('[OT]')?'YES':'NO'}`).join('\n');
+            navigator.clipboard.writeText(txt); alert("Copied for Spreadsheet!");
         };
 
-        // HISTORY ENGINE
-        document.getElementById('historyBtn').onclick = loadHistory;
-        async function loadHistory() {
-            const list = document.getElementById('historyList');
-            list.innerHTML = 'Loading records...';
-            document.getElementById('historyModal').classList.remove('hidden');
-            const snap = await db.collection("work_logs").where("user", "==", user).orderBy("timestamp", "desc").limit(15).get();
-            list.innerHTML = snap.empty ? 'No records.' : '';
-            snap.forEach(doc => {
-                const d = doc.data();
-                const div = document.createElement('div');
-                div.className = "bg-slate-800 p-4 rounded-xl flex justify-between items-center mb-2 border border-slate-700";
-                div.innerHTML = `
-                    <div><p class="font-black text-blue-400">${d.timestamp ? d.timestamp.toDate().toLocaleDateString() : 'N/A'}</p><p class="text-[10px] text-slate-500">${d.logs.length} Tasks</p></div>
-                    <div class="flex gap-2">
-                        <button onclick="copyHistory('${doc.id}')" class="bg-blue-600 px-4 py-2 rounded-lg text-xs font-bold">COPY</button>
-                        <button onclick="deleteHistory('${doc.id}')" class="bg-red-600/20 text-red-500 border border-red-500/30 px-3 py-2 rounded-lg text-xs">🗑️</button>
-                    </div>`;
-                list.append(div);
-                div.dataset.logData = JSON.stringify(d.logs);
-            });
+        function exportToCSV() {
+            let csv = "TechNumber,Username,Shift,Date,StartTime,EndTime,Hours,MainCategory,SubCategory,OT\n";
+            logs.forEach(l => { csv += `${config.tech},${user},${l.shiftName || config.shift},${l.date},${l.in},${l.out},${l.dur},"${l.main}","${l.sub}",${l.main.includes('[OT]')?'YES':'NO'}\n`; });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = `Logs_${user}.csv`; a.click();
         }
 
-        window.copyHistory = (id) => {
-            const btn = event.target;
-            const logsToCopy = JSON.parse(btn.closest('div.bg-slate-800').dataset.logData);
-            const txt = logsToCopy.map(l => 
-                `${config.tech}\t${user}\t${l.shiftName || config.shift}\t${l.date}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\t${l.main.includes('[OT]')?'YES':'NO'}`
-            ).join('\n');
-            navigator.clipboard.writeText(txt);
-            btn.textContent = "COPIED!"; setTimeout(() => btn.textContent = "COPY", 2000);
-        };
-
-        window.deleteHistory = async (id) => {
-            if(!confirm("DELETE record?")) return;
-            await db.collection("work_logs").doc(id).delete();
-            loadHistory();
-        };
-
+        // SETTINGS & HISTORY
         document.getElementById('saveSettings').onclick = async () => {
             config = { tech: document.getElementById('cfgTech').value, shift: document.getElementById('cfgShift').value, in: document.getElementById('setIn').value, b1: document.getElementById('setB1').value, l: document.getElementById('setL').value, b2: document.getElementById('setB2').value, out: document.getElementById('setOut').value };
             await db.collection("settings").doc(user).set(config);
             document.getElementById('settingsModal').classList.add('hidden');
             document.getElementById('techDisp').textContent = config.tech;
         };
-
-        document.getElementById('settingsBtn').onclick = () => {
-            document.getElementById('cfgTech').value = config.tech;
-            document.getElementById('cfgShift').value = config.shift;
-            document.getElementById('settingsModal').classList.remove('hidden');
+        document.getElementById('settingsBtn').onclick = () => { 
+            document.getElementById('cfgTech').value = config.tech || '';
+            document.getElementById('cfgShift').value = config.shift || 'Day';
+            document.getElementById('settingsModal').classList.remove('hidden'); 
         };
-
-        function initTaskModal() {
-            const m = document.getElementById('modalMainCat'), s = document.getElementById('modalSubCat');
-            m.innerHTML = Object.keys(categoryData).map(k => `<option value="${k}">${k}</option>`).join('');
-            m.onchange = () => s.innerHTML = categoryData[m.value].map(v => `<option value="${v}">${v}</option>`).join('');
-            m.onchange();
+        document.getElementById('historyBtn').onclick = loadHistory;
+        async function loadHistory() {
+            const list = document.getElementById('historyList'); list.innerHTML = 'Fetching cloud records...'; document.getElementById('historyModal').classList.remove('hidden');
+            const snap = await db.collection("work_logs").where("user", "==", user).orderBy("timestamp", "desc").limit(15).get();
+            list.innerHTML = snap.empty ? 'No records found.' : '';
+            snap.forEach(doc => {
+                const d = doc.data(); const div = document.createElement('div');
+                div.className = "bg-slate-800 p-4 rounded-xl flex justify-between items-center mb-2 border border-slate-700";
+                div.innerHTML = `<div><p class="font-black text-blue-400">${d.timestamp ? d.timestamp.toDate().toLocaleDateString() : 'N/A'}</p><p class="text-[10px] text-slate-500">${d.logs.length} Task Segments</p></div>
+                    <div class="flex gap-2"><button onclick="copyHistory('${doc.id}')" class="bg-blue-600 px-4 py-2 rounded-lg text-xs font-bold">COPY</button><button onclick="deleteHistory('${doc.id}')" class="bg-red-600/20 text-red-500 border border-red-500/30 px-3 py-2 rounded-lg text-xs hover:bg-red-600 hover:text-white">🗑️</button></div>`;
+                list.append(div); div.dataset.logData = JSON.stringify(d.logs);
+            });
         }
-
-        document.getElementById('resetShiftBtn').onclick = () => { if(confirm("Reset current shift?")) { logs=[]; state="IDLE"; shiftFinished=false; saveSession(); render(); updateUI(); } };
+        window.copyHistory = (id) => { const btn = event.target; const logsToCopy = JSON.parse(btn.closest('div.bg-slate-800').dataset.logData); const txt = logsToCopy.map(l => `${config.tech}\t${user}\t${l.shiftName || config.shift}\t${l.date}\t${l.in}\t${l.out}\t${l.dur}\t${l.main}\t${l.sub}\t${l.main.includes('[OT]')?'YES':'NO'}`).join('\n'); navigator.clipboard.writeText(txt); btn.textContent = "COPIED!"; setTimeout(() => btn.textContent = "COPY", 2000); };
+        window.deleteHistory = async (id) => { if(!confirm("Delete record permanently?")) return; await db.collection("work_logs").doc(id).delete(); loadHistory(); };
+        function initTaskModal() { const m = document.getElementById('modalMainCat'), s = document.getElementById('modalSubCat'); m.innerHTML = Object.keys(categoryData).map(k => `<option value="${k}">${k}</option>`).join(''); m.onchange = () => s.innerHTML = categoryData[m.value].map(v => `<option value="${v}">${v}</option>`).join(''); m.onchange(); }
     </script>
 </body>
 </html>
