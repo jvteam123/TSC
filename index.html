@@ -3,496 +3,394 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProResume | Ultimate Professional Builder</title>
+    <title>ProResume | Ultimate Professional Builder by Renzku</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f8fafc;
+        }
         
+        /* PRINT STABILITY FIX */
         @media print {
-            @page {
-                size: A4;
-                margin: 0; /* Removes browser headers/footers */
-            }
+            @page { size: A4; margin: 0; }
             .no-print { display: none !important; }
+            body { background: white !important; padding: 0 !important; margin: 0 !important; }
             
-            html, body { 
-                height: 100%;
-                overflow: hidden !important; 
-                background: white !important; 
-                padding: 0 !important; 
-                margin: 0 !important; 
-            }
-
-            main { 
-                padding: 0 !important; 
-                margin: 0 !important;
-                display: block !important;
-                height: 100%;
-            }
-
-            /* Force the resume to be exactly one page and remove any shifting */
             .resume-page { 
                 box-shadow: none !important; 
                 border: none !important; 
                 width: 210mm !important; 
                 height: 297mm !important;
-                margin: 0 auto !important;
-                padding: 15mm !important;
-                transform: none !important;
-                display: flex !important;
+                padding: 20mm !important;
+                margin: 0 !important;
                 position: absolute;
                 top: 0;
                 left: 0;
             }
-
-            #status-modal { display: none !important; visibility: hidden !important; }
+            /* Prevent text scrambling/overlapping on export */
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
-
-        .drag-handle { cursor: grab; }
-        .drag-handle:active { cursor: grabbing; }
-        .ghost { opacity: 0.2; background: #e0e7ff; border: 2px dashed #6366f1; }
-        
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
         .resume-page {
             width: 210mm;
             min-height: 297mm;
-            transition: all 0.2s ease-out;
-            display: flex;
-            flex-direction: column;
-            transform-origin: top center;
             background: white;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.05);
+            padding: 20mm;
+            transition: transform 0.3s ease;
         }
 
-        .section-card { transition: all 0.2s ease; }
-        .section-card:focus-within {
-            border-color: #6366f1;
-            box-shadow: 0 4px 12px -2px rgba(99, 102, 241, 0.1);
+        /* Custom Scrollbar */
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+
+        /* Section Styling */
+        .section-title {
+            color: var(--theme-color, #6366f1);
+            font-size: 0.75rem;
+            font-weight: 800;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            border-bottom: 2px solid #f1f5f9;
+            padding-bottom: 8px;
+            margin-bottom: 20px;
         }
 
-        .break-inside-avoid { break-inside: avoid; }
-
-        /* Custom Modal UI */
-        #status-modal {
+        #printModal {
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(4px);
-            z-index: 1000;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 100;
             align-items: center;
             justify-content: center;
         }
+        #printModal.active { display: flex; }
 
-        #status-modal.active { display: flex; }
+        .drag-handle { cursor: grab; padding: 4px; }
+        .drag-handle:active { cursor: grabbing; }
+        .ghost { opacity: 0.2; background: #6366f1; border-radius: 1rem; }
+        
+        /* Editor Cards */
+        .editor-card {
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .editor-card:hover {
+            border-color: #cbd5e1;
+        }
     </style>
 </head>
-<body class="bg-[#f1f5f9] text-slate-900 flex flex-col min-h-screen">
+<body class="flex flex-col h-screen overflow-hidden">
 
-    <!-- Top Navigation -->
-    <nav class="sticky top-0 z-50 bg-white/90 backdrop-blur-lg border-b border-slate-200 px-6 py-3 no-print shadow-sm">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="bg-indigo-600 p-2 rounded-xl text-white shadow-lg shadow-indigo-200">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-                </div>
-                <div>
-                    <span class="text-xl font-black tracking-tight text-slate-800">Pro<span class="text-indigo-600">Resume</span></span>
-                    <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-1">v1.0</span>
-                </div>
+    <!-- Navigation -->
+    <nav class="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center no-print shrink-0 z-10">
+        <div class="flex items-center gap-3">
+            <div class="bg-indigo-600 p-2 rounded-xl text-white shadow-lg shadow-indigo-100">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
             </div>
-            <div class="flex items-center gap-4">
-                <div class="hidden lg:flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
-                    <label class="text-[10px] font-black px-2 text-slate-500 uppercase tracking-wider">Color</label>
-                    <input type="color" id="theme-color" value="#4f46e5" oninput="update()" class="w-7 h-7 rounded-lg border-none cursor-pointer bg-transparent">
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="resetData()" class="text-slate-400 hover:text-red-500 px-3 py-2 text-xs font-bold transition-colors">Reset</button>
-                    
-                    <button onclick="handleExport('pdf')" class="bg-white border-2 border-slate-200 hover:border-indigo-600 text-slate-700 hover:text-indigo-600 px-4 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 active:scale-95">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                        Download PDF
-                    </button>
+            <div>
+                <h1 class="text-lg font-black tracking-tight text-slate-800 uppercase leading-none">Pro<span class="text-indigo-600">Resume</span></h1>
+                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">by Renzku</p>
+            </div>
+        </div>
 
-                    <button onclick="handleExport('print')" class="bg-slate-900 hover:bg-black text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-xl flex items-center gap-2 active:scale-95">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-                        Print Resume
-                    </button>
-                </div>
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+                <input type="color" id="theme-color" value="#6366f1" oninput="updatePreview()" class="w-6 h-6 rounded-md cursor-pointer border-none bg-transparent">
             </div>
+            <button onclick="showPrintModal()" class="bg-slate-900 hover:bg-black text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 shadow-xl shadow-slate-200 active:scale-95">
+                Print / Download
+            </button>
         </div>
     </nav>
 
-    <!-- Export Modal -->
-    <div id="status-modal" class="no-print">
-        <div class="bg-white p-8 rounded-[2rem] shadow-2xl max-w-sm w-full mx-4 border border-slate-100 text-center scale-95 transition-transform duration-300">
-            <div id="modal-icon" class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <!-- Icon Injected via JS -->
+    <!-- Main Workspace -->
+    <main class="flex flex-1 overflow-hidden">
+        
+        <!-- Editor Sidebar -->
+        <aside class="w-[480px] border-r border-slate-200 bg-white overflow-y-auto custom-scroll no-print p-8 space-y-8 pb-32">
+            <!-- Personal Info -->
+            <div class="space-y-6">
+                <div class="flex items-center gap-4 p-5 bg-indigo-50/50 rounded-2xl border border-indigo-100">
+                    <div class="relative group">
+                        <div id="photo-preview" class="w-20 h-20 bg-white border-2 border-dashed border-indigo-200 rounded-2xl flex items-center justify-center overflow-hidden shadow-inner">
+                            <span class="text-[10px] font-black text-indigo-300 uppercase">Photo</span>
+                            <img id="profile-img" class="hidden absolute inset-0 w-full h-full object-cover">
+                        </div>
+                        <input type="file" onchange="handlePhoto(this)" class="absolute inset-0 opacity-0 cursor-pointer">
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-black uppercase text-indigo-900 tracking-wider">Profile Image</p>
+                        <button onclick="removePhoto()" class="text-[10px] font-bold text-red-500 uppercase mt-1 hover:underline">Remove</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-5">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Full Name</label>
+                        <input type="text" id="in-name" oninput="updatePreview()" placeholder="Alexander Pierce" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-4 ring-indigo-500/10 focus:bg-white transition-all">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Professional Title</label>
+                        <input type="text" id="in-title" oninput="updatePreview()" placeholder="Senior Product Designer" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-4 ring-indigo-500/10 focus:bg-white transition-all">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Email</label>
+                            <input type="text" id="in-email" oninput="updatePreview()" placeholder="alex@work.com" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-4 ring-indigo-500/10">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Phone</label>
+                            <input type="text" id="in-phone" oninput="updatePreview()" placeholder="+1 555 000" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-4 ring-indigo-500/10">
+                        </div>
+                    </div>
+                </div>
             </div>
-            <h2 id="modal-title" class="text-xl font-black text-slate-900 mb-2 tracking-tight">Exporting...</h2>
-            <div id="modal-text" class="text-slate-500 text-sm mb-8 leading-relaxed"></div>
-            <div id="modal-actions" class="flex gap-2">
-                <button onclick="closeModal()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-900 py-3 rounded-xl font-bold text-sm transition-all">Dismiss</button>
+
+            <hr class="border-slate-100">
+
+            <!-- Draggable Sections List -->
+            <div id="dynamic-sections" class="space-y-6">
+                <!-- Sections rendered by JS -->
+            </div>
+
+            <!-- Add Section UI -->
+            <div class="space-y-4">
+                <div class="bg-slate-50 p-6 rounded-3xl border border-slate-200">
+                    <p class="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-4 text-center">Suggested Sections</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="addSection('Objective', 'text')" class="px-4 py-3 bg-white border border-slate-200 rounded-xl text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:border-indigo-500 hover:text-indigo-600 transition-all shadow-sm">🎯 Objective</button>
+                        <button onclick="addSection('Experience', 'list')" class="px-4 py-3 bg-white border border-slate-200 rounded-xl text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:border-indigo-500 hover:text-indigo-600 transition-all shadow-sm">💼 Experience</button>
+                        <button onclick="addSection('Projects', 'list')" class="px-4 py-3 bg-white border border-slate-200 rounded-xl text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:border-indigo-500 hover:text-indigo-600 transition-all shadow-sm">🚀 Projects</button>
+                        <button onclick="addSection('Languages', 'tags')" class="px-4 py-3 bg-white border border-slate-200 rounded-xl text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:border-indigo-500 hover:text-indigo-600 transition-all shadow-sm">🌐 Languages</button>
+                    </div>
+                    <button onclick="addSection('Custom Section', 'text')" class="w-full mt-4 py-3 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
+                        + Create Blank Section
+                    </button>
+                </div>
+            </div>
+            
+            <div class="pt-8 text-center opacity-40">
+                <p class="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Created by Renzku</p>
+                <p class="text-[8px] font-bold text-slate-300 mt-1 uppercase">© 2024 ProResume Engine</p>
+            </div>
+        </aside>
+
+        <!-- Preview Area -->
+        <section class="flex-1 bg-slate-100 overflow-y-auto p-12 flex justify-center custom-scroll">
+            <div id="resume-canvas" class="resume-page">
+                <!-- Content Injected -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Print Modal -->
+    <div id="printModal" class="no-print">
+        <div class="bg-white p-10 rounded-[3rem] shadow-2xl max-w-md w-full text-center border border-slate-100">
+            <div class="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            </div>
+            <h2 class="text-2xl font-black text-slate-900 mb-2">Ready to Print</h2>
+            <p class="text-slate-500 text-sm mb-8 leading-relaxed">Ensure <span class="font-bold text-slate-800">Background Graphics</span> is enabled in your browser print settings for the best results.</p>
+            <div class="flex flex-col gap-3">
+                <button onclick="window.print()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-xl shadow-indigo-200 active:scale-95 transition-all">Start Printing</button>
+                <button onclick="closeModal()" class="w-full bg-slate-100 text-slate-500 py-4 rounded-2xl font-bold hover:bg-slate-200 transition-all">Dismiss</button>
             </div>
         </div>
     </div>
 
-    <main class="max-w-[1500px] mx-auto grid grid-cols-1 xl:grid-cols-[480px_1fr] gap-10 p-6 md:p-10 flex-grow">
-        
-        <!-- Editor Sidebar -->
-        <div class="space-y-8 no-print max-h-[calc(100vh-180px)] overflow-y-auto pr-4 pb-10">
-            <!-- Sidebar Content remains consistent -->
-            <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden section-card">
-                <div class="bg-slate-50/50 px-8 py-5 border-b border-slate-100">
-                    <h3 class="font-black text-slate-800 flex items-center gap-3 text-xs uppercase tracking-[0.2em]">
-                        <svg class="text-indigo-600" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        Personal Profile
-                    </h3>
-                </div>
-                <div class="p-8 space-y-6">
-                    <div class="flex items-center gap-6 p-4 bg-indigo-50/30 rounded-2xl border border-indigo-100/50">
-                        <div class="relative">
-                            <div id="editor-photo-placeholder" class="w-24 h-24 rounded-2xl bg-white border-2 border-dashed border-indigo-200 flex items-center justify-center overflow-hidden cursor-pointer hover:border-indigo-400 transition-all shadow-inner">
-                                <div class="text-center px-2">
-                                    <svg class="mx-auto text-indigo-300 mb-1" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                                    <span class="text-[9px] text-indigo-400 font-black uppercase tracking-tighter">Photo</span>
-                                </div>
-                                <img id="editor-photo-img" class="absolute inset-0 w-full h-full object-cover hidden">
-                            </div>
-                            <input type="file" id="photo-upload" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" onchange="handlePhoto(event)">
-                        </div>
-                        <div class="flex-1">
-                            <p class="text-[11px] font-black text-indigo-900 uppercase tracking-widest mb-1">Portrait Image</p>
-                            <button onclick="removePhoto()" class="text-[10px] font-bold text-red-500 hover:bg-red-50 px-2 py-1 rounded transition-colors uppercase">Remove</button>
-                        </div>
-                    </div>
-                    
-                    <div class="grid grid-cols-2 gap-5">
-                        <div class="col-span-2">
-                            <label class="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">Full Name</label>
-                            <input type="text" id="in-name" oninput="update()" placeholder="Alexander Pierce" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 ring-indigo-500/10 outline-none transition-all text-sm font-medium">
-                        </div>
-                        <div class="col-span-2">
-                            <label class="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">Headline</label>
-                            <input type="text" id="in-title" oninput="update()" placeholder="Senior Software Architect" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 ring-indigo-500/10 outline-none transition-all text-sm font-medium">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">Email</label>
-                            <input type="email" id="in-email" oninput="update()" placeholder="alex@work.com" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 ring-indigo-500/10 outline-none transition-all text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">Phone</label>
-                            <input type="text" id="in-phone" oninput="update()" placeholder="+1 (555) 000-000" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 ring-indigo-500/10 outline-none transition-all text-sm">
-                        </div>
-                        <div class="col-span-2">
-                            <label class="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">Location</label>
-                            <input type="text" id="in-location" oninput="update()" placeholder="San Francisco, CA" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 ring-indigo-500/10 outline-none transition-all text-sm">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="section-editor-list" class="space-y-6"></div>
-
-            <div class="bg-indigo-600 p-8 rounded-3xl text-center text-white shadow-xl shadow-indigo-100">
-                <h4 class="text-xs font-black uppercase tracking-[0.2em] mb-4">Add Specialized Sections</h4>
-                <div class="flex flex-wrap justify-center gap-2">
-                    <button onclick="addCustomSection('Objective', 'text')" class="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all">🎯 Objective</button>
-                    <button onclick="addCustomSection('Experience', 'list')" class="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all">💼 Work</button>
-                    <button onclick="addCustomSection('Projects', 'list')" class="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all">🚀 Projects</button>
-                    <button onclick="addCustomSection('Languages', 'tags')" class="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all">🌐 Languages</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Preview Area -->
-        <div class="flex flex-col items-center">
-            <div id="resume-canvas" class="resume-page shadow-[0_40px_80px_-15px_rgba(0,0,0,0.15)] p-[20mm] relative overflow-hidden text-slate-800 border border-slate-100">
-                
-                <!-- Header -->
-                <div class="flex justify-between items-start mb-10 gap-10">
-                    <div class="flex-1">
-                        <h1 id="pv-name" class="text-5xl font-black text-slate-900 tracking-tighter leading-none mb-3 uppercase">YOUR NAME</h1>
-                        <p id="pv-title" class="text-xl font-bold tracking-[0.15em] mb-8 uppercase theme-text">PROFESSIONAL TITLE</p>
-                        
-                        <div class="flex flex-wrap gap-x-8 gap-y-2 text-[12px] text-slate-500 font-bold uppercase tracking-wide">
-                            <div class="flex items-center gap-2.5">
-                                <svg class="theme-text" width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
-                                <span id="pv-email">email@work.com</span>
-                            </div>
-                            <div class="flex items-center gap-2.5">
-                                <svg class="theme-text" width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
-                                <span id="pv-phone">123-456-7890</span>
-                            </div>
-                            <div class="flex items-center gap-2.5">
-                                <svg class="theme-text" width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                                <span id="pv-location">San Francisco, CA</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="pv-photo-wrapper" class="hidden flex-shrink-0">
-                        <div class="p-1.5 border-[6px] border-slate-50 bg-white shadow-xl rotate-1">
-                            <img id="pv-photo-img" src="" class="w-[35mm] h-[35mm] object-cover block bg-slate-100">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Content Body -->
-                <div id="preview-sections-list" class="space-y-8 flex-1"></div>
-            </div>
-        </div>
-    </main>
-
-    <footer class="no-print w-full py-8 border-t border-slate-200 bg-white/50 text-center">
-        <div class="flex flex-col gap-1">
-            <span class="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-600/50">ProResume Builder</span>
-            <span class="text-[11px] font-bold text-slate-400">Created by Renzku</span>
-        </div>
-    </footer>
-
     <script>
-        const DEFAULTS = {
+        let state = {
             photo: '',
-            theme: '#4f46e5',
-            personal: { name: '', title: '', email: '', phone: '', location: '' },
             sections: [
-                { id: 'summary', type: 'text', title: 'Summary', content: 'Seasoned Product Designer with 5+ years of experience in creating user-centric digital products. Expert in translating complex business requirements into elegant, high-performance interfaces.' },
-                { id: 'exp', type: 'list', title: 'Experience', items: [{ company: 'Global Tech Inc.', role: 'Senior Developer', date: '2020 - Present', desc: 'Led a cross-functional team of 10 developers to build scalable cloud solutions. Reduced infrastructure costs by 35% through containerization.' }] },
-                { id: 'skills', type: 'tags', title: 'Technical Stack', content: 'JavaScript, React, Node.js, Project Leadership, Agile, SQL, AWS, Figma' },
-                { id: 'edu', type: 'list', title: 'Education', items: [{ school: 'Stanford University', degree: 'B.S. Computer Science', date: '2014 - 2018' }] }
+                { id: 'sec-1', title: 'Summary', type: 'text', content: 'Seasoned Product Designer with 5+ years of experience in creating user-centric digital products. Expert in translating complex business requirements into elegant, high-performance interfaces.' },
+                { id: 'sec-2', title: 'Experience', type: 'list', items: [{ role: 'Senior Developer', org: 'Global Tech Inc.', date: '2020 - Present', desc: 'Led a cross-functional team of 10 developers to build scalable cloud solutions.' }] },
+                { id: 'sec-3', title: 'Technical Stack', type: 'tags', content: 'JavaScript, React, Node.js, Project Leadership, Agile, SQL, AWS, Figma' }
             ]
         };
 
-        let state = JSON.parse(JSON.stringify(DEFAULTS));
-
-        const el = document.getElementById('section-editor-list');
-        new Sortable(el, {
-            animation: 300, handle: '.drag-handle', ghostClass: 'ghost',
-            onEnd: () => {
-                const ids = Array.from(el.querySelectorAll('[data-id]')).map(n => n.dataset.id);
-                state.sections = ids.map(id => state.sections.find(s => s.id === id));
-                update();
+        // Initialize Sortable
+        const sortableList = document.getElementById('dynamic-sections');
+        new Sortable(sortableList, {
+            animation: 250,
+            handle: '.drag-handle',
+            ghostClass: 'ghost',
+            onEnd: function() {
+                const newOrderIds = Array.from(sortableList.querySelectorAll('.editor-card')).map(el => el.dataset.id);
+                const reorderedSections = newOrderIds.map(id => state.sections.find(s => s.id === id));
+                state.sections = reorderedSections;
+                updatePreview();
             }
         });
 
-        function handlePhoto(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                state.photo = event.target.result;
-                const img = document.getElementById('editor-photo-img');
-                img.src = state.photo; img.classList.remove('hidden');
-                update();
-            };
-            reader.readAsDataURL(file);
+        function handlePhoto(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    state.photo = e.target.result;
+                    const img = document.getElementById('profile-img');
+                    img.src = state.photo;
+                    img.classList.remove('hidden');
+                    updatePreview();
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
         }
 
         function removePhoto() {
             state.photo = '';
-            document.getElementById('photo-upload').value = '';
-            document.getElementById('editor-photo-img').classList.add('hidden');
-            update();
+            document.getElementById('profile-img').classList.add('hidden');
+            updatePreview();
         }
 
-        function addCustomSection(title, type) {
-            const sid = 'sec-' + Date.now();
-            state.sections.push({
-                id: sid,
-                type: type,
-                title: title,
-                content: type === 'tags' ? 'Tag1, Tag2' : '',
-                items: type === 'list' ? [{ company: '', role: '', date: '', desc: '' }] : []
-            });
-            renderEditor(); update();
+        function addSection(title = 'New Section', type = 'text') {
+            const id = 'sec-' + Date.now();
+            const newSection = { id, title, type, content: '' };
+            if (type === 'list') newSection.items = [{ role: '', org: '', date: '', desc: '' }];
+            
+            state.sections.push(newSection);
+            renderEditor();
+            updatePreview();
         }
 
         function removeSection(id) {
             state.sections = state.sections.filter(s => s.id !== id);
-            renderEditor(); update();
+            renderEditor();
+            updatePreview();
         }
 
-        function addItem(sid) {
-            const section = state.sections.find(x => x.id === sid);
-            section.items.unshift({ company: '', role: '', date: '', desc: '' });
-            renderEditor(); update();
+        function updateSection(id, key, value) {
+            const sec = state.sections.find(s => s.id === id);
+            sec[key] = value;
+            updatePreview();
         }
 
-        function removeListItem(sid, idx) {
-            state.sections.find(x => x.id === sid).items.splice(idx, 1);
-            renderEditor(); update();
+        // Add item for list-type sections
+        function addListItem(sid) {
+            const sec = state.sections.find(s => s.id === sid);
+            sec.items.push({ role: '', org: '', date: '', desc: '' });
+            renderEditor();
+            updatePreview();
         }
 
-        function handleExport(mode) {
-            const modal = document.getElementById('status-modal');
-            const title = document.getElementById('modal-title');
-            const text = document.getElementById('modal-text');
-            const icon = document.getElementById('modal-icon');
-            const actions = document.getElementById('modal-actions');
-
-            actions.innerHTML = `<button onclick="closeModal()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-900 py-3 rounded-xl font-bold text-sm transition-all">Dismiss</button>`;
-            
-            if (mode === 'pdf') {
-                title.innerText = "Exporting High-Res PDF";
-                text.innerHTML = `
-                    <div class="text-left space-y-4">
-                        <p>Follow these steps in the next window:</p>
-                        <ol class="list-decimal list-inside space-y-2 font-semibold text-xs">
-                            <li>Destination: <span class="text-indigo-600">Save as PDF</span></li>
-                            <li>Settings > <span class="text-indigo-600">Background Graphics (ON)</span></li>
-                            <li>Margins: <span class="text-indigo-600">None</span></li>
-                        </ol>
-                    </div>`;
-                icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
-            } else {
-                title.innerText = "Ready to Print";
-                text.innerText = "Launching printer queue. Set Margins to 'None' for full-page design.";
-                icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>`;
-            }
-
-            modal.classList.add('active');
-
-            // Brief delay to allow the modal text to render for the user before system blocks the thread
-            setTimeout(() => {
-                window.print();
-                title.innerText = "Success";
-                text.innerText = "The export process was initiated.";
-            }, 500);
+        function updateListItem(sid, idx, key, value) {
+            state.sections.find(s => s.id === sid).items[idx][key] = value;
+            updatePreview();
         }
-
-        function closeModal() {
-            document.getElementById('status-modal').classList.remove('active');
-        }
-
-        function resetData() {
-            if(confirm("Reset all data?")) {
-                state = JSON.parse(JSON.stringify(DEFAULTS));
-                location.reload();
-            }
-        }
-
-        function updateSectionTitle(id, val) { state.sections.find(x => x.id === id).title = val; update(); }
-        function updateSectionContent(id, val) { state.sections.find(x => x.id === id).content = val; update(); }
-        function updateListItem(sid, idx, k, v) { state.sections.find(x => x.id === sid).items[idx][k] = v; update(); }
 
         function renderEditor() {
-            const container = document.getElementById('section-editor-list');
-            container.innerHTML = state.sections.map((section) => {
-                let inner = '';
-                if (section.type === 'text') {
-                    inner = `<div class="p-6">
-                        <input type="text" value="${section.title}" oninput="updateSectionTitle('${section.id}', this.value)" class="w-full mb-4 px-3 py-2 text-xs font-black uppercase tracking-widest border border-slate-200 rounded-lg bg-slate-50 outline-none">
-                        <textarea oninput="updateSectionContent('${section.id}', this.value)" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm h-32 leading-relaxed">${section.content}</textarea>
-                    </div>`;
-                } else if (section.type === 'tags') {
-                    inner = `<div class="p-6">
-                        <input type="text" value="${section.title}" oninput="updateSectionTitle('${section.id}', this.value)" class="w-full mb-4 px-3 py-2 text-xs font-black uppercase tracking-widest border border-slate-200 rounded-lg bg-slate-50 outline-none">
-                        <input type="text" value="${section.content}" oninput="updateSectionContent('${section.id}', this.value)" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm">
-                    </div>`;
-                } else if (section.type === 'list') {
-                    inner = `<div class="p-6 space-y-4">
-                        <input type="text" value="${section.title}" oninput="updateSectionTitle('${section.id}', this.value)" class="w-full px-3 py-2 text-xs font-black uppercase tracking-widest border border-slate-200 rounded-lg bg-slate-50 outline-none">
-                        <div class="space-y-4">
-                            ${section.items.map((item, i) => `
-                                <div class="p-4 border border-slate-100 rounded-2xl bg-slate-50/50 relative group">
-                                    <button onclick="removeListItem('${section.id}', ${i})" class="absolute top-2 right-2 w-6 h-6 flex items-center justify-center bg-white border border-slate-200 rounded-full text-slate-300 hover:text-red-500 hover:border-red-200 transition-all">×</button>
-                                    <div class="grid grid-cols-2 gap-3">
-                                        <input type="text" placeholder="Title/Role" value="${item.role || item.degree || ''}" oninput="updateListItem('${section.id}', ${i}, 'role', this.value)" class="col-span-2 p-2.5 text-xs font-bold border rounded-lg bg-white">
-                                        <input type="text" placeholder="Organization" value="${item.company || item.school || ''}" oninput="updateListItem('${section.id}', ${i}, 'company', this.value)" class="p-2.5 text-xs border rounded-lg bg-white">
-                                        <input type="text" placeholder="Date Range" value="${item.date}" oninput="updateListItem('${section.id}', ${i}, 'date', this.value)" class="p-2.5 text-xs border rounded-lg bg-white">
-                                        <textarea placeholder="Description" oninput="updateListItem('${section.id}', ${i}, 'desc', this.value)" class="col-span-2 p-2.5 text-xs border rounded-lg bg-white h-24">${item.desc || ''}</textarea>
-                                    </div>
-                                </div>`).join('')}
+            const container = document.getElementById('dynamic-sections');
+            container.innerHTML = state.sections.map(s => `
+                <div class="editor-card p-6 bg-white rounded-2xl border border-slate-200 shadow-sm relative group" data-id="${s.id}">
+                    <div class="flex justify-between items-center mb-5">
+                        <div class="flex items-center gap-3">
+                            <div class="drag-handle text-slate-300 hover:text-indigo-400 transition-colors">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+                            </div>
+                            <input type="text" value="${s.title}" oninput="updateSection('${s.id}', 'title', this.value)" class="bg-transparent font-black text-[10px] uppercase tracking-[0.2em] text-slate-800 outline-none w-full">
                         </div>
-                        <button onclick="addItem('${section.id}')" class="w-full py-3 border-2 border-dashed border-slate-200 text-slate-400 hover:text-indigo-500 text-[10px] font-black uppercase rounded-xl transition-all">+ Add New Item</button>
-                    </div>`;
-                }
-                return `<div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden" data-id="${section.id}">
-                    <div class="bg-slate-50/50 px-8 py-4 border-b border-slate-100 flex justify-between items-center">
-                        <h3 class="font-black text-slate-800 text-[10px] uppercase tracking-[0.2em] flex items-center gap-2">
-                            <span class="drag-handle text-slate-300 cursor-grab px-1">⣿</span> ${section.title}
-                        </h3>
-                        <button onclick="removeSection('${section.id}')" class="text-slate-300 hover:text-red-500 transition-colors text-lg">×</button>
+                        <button onclick="removeSection('${s.id}')" class="text-slate-300 hover:text-red-500 transition-colors text-xl font-light">×</button>
                     </div>
-                    ${inner}
-                </div>`;
-            }).join('');
+                    
+                    ${s.type === 'text' ? `
+                        <textarea oninput="updateSection('${s.id}', 'content', this.value)" class="w-full p-4 text-sm bg-slate-50 border border-slate-100 rounded-xl h-28 outline-none focus:ring-4 ring-indigo-500/5 focus:bg-white transition-all">${s.content}</textarea>
+                    ` : s.type === 'tags' ? `
+                        <input type="text" value="${s.content || ''}" oninput="updateSection('${s.id}', 'content', this.value)" placeholder="Separate items with commas..." class="w-full p-4 text-sm bg-slate-50 border border-slate-100 rounded-xl outline-none focus:bg-white transition-all">
+                    ` : `
+                        <div class="space-y-4">
+                            ${s.items.map((item, idx) => `
+                                <div class="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-3">
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <input type="text" placeholder="Role" value="${item.role}" oninput="updateListItem('${s.id}', ${idx}, 'role', this.value)" class="p-2 text-xs font-bold rounded-lg border-none bg-white">
+                                        <input type="text" placeholder="Date" value="${item.date}" oninput="updateListItem('${s.id}', ${idx}, 'date', this.value)" class="p-2 text-xs rounded-lg border-none bg-white">
+                                    </div>
+                                    <input type="text" placeholder="Organization" value="${item.org}" oninput="updateListItem('${s.id}', ${idx}, 'org', this.value)" class="w-full p-2 text-xs rounded-lg border-none bg-white">
+                                    <textarea placeholder="Description" oninput="updateListItem('${s.id}', ${idx}, 'desc', this.value)" class="w-full p-2 text-xs rounded-lg border-none bg-white h-16">${item.desc}</textarea>
+                                </div>
+                            `).join('')}
+                            <button onclick="addListItem('${s.id}')" class="text-[9px] font-black uppercase text-indigo-600 tracking-widest">+ Add Entry</button>
+                        </div>
+                    `}
+                </div>
+            `).join('');
         }
 
-        function update() {
-            state.theme = document.getElementById('theme-color').value;
-            document.querySelectorAll('.theme-text').forEach(el => el.style.color = state.theme);
+        function updatePreview() {
+            const color = document.getElementById('theme-color').value;
+            document.documentElement.style.setProperty('--theme-color', color);
             
-            if (state.photo) { 
-                document.getElementById('pv-photo-wrapper').classList.remove('hidden'); 
-                document.getElementById('pv-photo-img').src = state.photo; 
-            } else { 
-                document.getElementById('pv-photo-wrapper').classList.add('hidden'); 
-            }
+            const canvas = document.getElementById('resume-canvas');
+            const name = (document.getElementById('in-name').value || "YOUR NAME").toUpperCase();
+            const title = (document.getElementById('in-title').value || "PROFESSIONAL TITLE").toUpperCase();
+            const email = document.getElementById('in-email').value || "email@work.com";
+            const phone = document.getElementById('in-phone').value || "123-456-7890";
 
-            document.getElementById('pv-name').innerText = document.getElementById('in-name').value.toUpperCase() || "YOUR NAME";
-            document.getElementById('pv-title').innerText = document.getElementById('in-title').value.toUpperCase() || "PROFESSIONAL TITLE";
-            document.getElementById('pv-email').innerText = document.getElementById('in-email').value || "email@work.com";
-            document.getElementById('pv-phone').innerText = document.getElementById('in-phone').value || "+1 (555) 000-000";
-            document.getElementById('pv-location').innerText = document.getElementById('in-location').value || "San Francisco, CA";
-
-            const list = document.getElementById('preview-sections-list');
-            list.innerHTML = '';
+            let html = `
+                <header class="flex justify-between items-start gap-10 mb-12">
+                    <div class="flex-1">
+                        <h1 class="text-6xl font-black text-slate-900 tracking-tighter leading-none mb-3">${name}</h1>
+                        <p class="text-xl font-bold tracking-[0.25em] uppercase mb-8" style="color: ${color}">${title}</p>
+                        <div class="flex gap-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">
+                            <div class="flex items-center gap-2">
+                                <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>
+                                <span>${email}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 004.812 4.812l.774-1.548a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/></svg>
+                                <span>${phone}</span>
+                            </div>
+                        </div>
+                    </div>
+                    ${state.photo ? `<div class="p-1.5 bg-white shadow-2xl rounded-2xl border border-slate-50 rotate-2 shrink-0"><img src="${state.photo}" class="w-32 h-32 object-cover rounded-xl"></div>` : ''}
+                </header>
+                <div class="space-y-10">
+            `;
 
             state.sections.forEach(s => {
-                let html = '';
-                const h = `<h4 class="text-[12px] font-black tracking-[0.25em] uppercase mb-4 pb-1.5 border-b border-slate-100" style="color: ${state.theme}">${s.title}</h4>`;
+                let contentHtml = '';
                 
                 if (s.type === 'text' && s.content.trim()) {
-                    html = `${h}<p class="text-[12.5px] leading-relaxed text-slate-600 whitespace-pre-line">${s.content}</p>`;
+                    contentHtml = `<p class="text-[13px] leading-relaxed text-slate-600 whitespace-pre-line">${s.content}</p>`;
                 } else if (s.type === 'tags' && s.content.trim()) {
                     const tags = s.content.split(',').map(t => t.trim()).filter(t => t);
-                    html = `${h}<div class="flex flex-wrap gap-1.5">${tags.map(t => `<span class="px-2 py-1 bg-slate-50 border border-slate-100 rounded text-[10px] font-bold text-slate-700 uppercase">${t}</span>`).join('')}</div>`;
-                } else if (s.type === 'list' && s.items.length > 0) {
-                    html = `${h}<div class="space-y-6">` + s.items.map(item => {
-                        const org = item.company || item.school || '';
-                        const role = item.role || item.degree || '';
-                        if (!org && !role) return '';
+                    contentHtml = `<div class="flex flex-wrap gap-2">${tags.map(t => `<span class="px-2.5 py-1 bg-slate-50 border border-slate-100 rounded text-[10px] font-black text-slate-500 uppercase tracking-wider">${t}</span>`).join('')}</div>`;
+                } else if (s.type === 'list') {
+                    contentHtml = s.items.map(i => {
+                        if (!i.role && !i.org) return '';
                         return `
-                            <div class="relative pl-5 border-l border-slate-100 break-inside-avoid">
-                                <div class="absolute -left-[4.5px] top-1.5 w-[8px] h-[8px] rounded-full bg-white border" style="border-color: ${state.theme}"></div>
-                                <div class="flex justify-between items-start mb-0.5 gap-4">
-                                    <h5 class="text-[14px] font-black text-slate-900 leading-tight flex-1">${role}</h5>
-                                    <span class="text-[8.5px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-1.5 py-0.5 rounded shrink-0">${item.date || ''}</span>
-                                </div>
-                                <p class="text-[11.5px] font-bold mb-2 uppercase tracking-wider" style="color: ${state.theme}">${org}</p>
-                                ${item.desc ? `<p class="text-[12.5px] leading-relaxed text-slate-600 whitespace-pre-line">${item.desc}</p>` : ''}
+                        <div class="mb-6 last:mb-0">
+                            <div class="flex justify-between items-baseline mb-1">
+                                <h5 class="text-[15px] font-black text-slate-900 leading-tight">${i.role}</h5>
+                                <span class="text-[9px] font-black text-slate-300 uppercase tracking-widest shrink-0 ml-4">${i.date}</span>
                             </div>
-                        `;
-                    }).join('') + `</div>`;
+                            <div class="text-[11px] font-black uppercase tracking-wider mb-2" style="color: ${color}">${i.org}</div>
+                            <p class="text-[13px] text-slate-600 leading-relaxed whitespace-pre-line">${i.desc}</p>
+                        </div>
+                    `}).join('');
                 }
 
-                if (html) {
-                    const d = document.createElement('div');
-                    d.className = "break-inside-avoid";
-                    d.innerHTML = html;
-                    list.appendChild(d);
+                if (contentHtml) {
+                    html += `<section>
+                        <div class="section-title" style="color: ${color}">${s.title}</div>
+                        ${contentHtml}
+                    </section>`;
                 }
             });
 
-            const canvas = document.getElementById('resume-canvas');
-            const parentWidth = canvas.parentElement.clientWidth;
-            if(window.innerWidth > 1280 && parentWidth < 850) {
-                const scale = parentWidth / 850;
-                canvas.style.transform = `scale(${scale})`;
-            } else {
-                canvas.style.transform = 'none';
-            }
+            html += `</div>`;
+            canvas.innerHTML = html;
         }
 
-        window.addEventListener('resize', update);
-        renderEditor(); 
-        update();
+        function showPrintModal() { document.getElementById('printModal').classList.add('active'); }
+        function closeModal() { document.getElementById('printModal').classList.remove('active'); }
+
+        renderEditor();
+        updatePreview();
     </script>
 </body>
 </html>
