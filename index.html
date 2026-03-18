@@ -8,29 +8,32 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --theme-color: #6366f1;
+        }
+
         body { 
             font-family: 'Inter', sans-serif; 
             background-color: #f8fafc;
+            -webkit-font-smoothing: antialiased;
         }
         
         /* PRINT STABILITY FIX */
         @media print {
             @page { size: A4; margin: 0; }
             .no-print { display: none !important; }
-            body { background: white !important; padding: 0 !important; margin: 0 !important; }
+            body { background: white !important; padding: 0 !important; margin: 0 !important; overflow: visible !important; }
             
             .resume-page { 
                 box-shadow: none !important; 
                 border: none !important; 
                 width: 210mm !important; 
                 height: 297mm !important;
-                padding: 20mm !important;
+                padding: 15mm 20mm !important; /* Adjusted for standard margins */
                 margin: 0 !important;
-                position: absolute;
-                top: 0;
-                left: 0;
+                position: relative !important;
+                transform: none !important;
             }
-            /* Prevent text scrambling/overlapping on export */
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
 
@@ -38,73 +41,82 @@
             width: 210mm;
             min-height: 297mm;
             background: white;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.05);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
             padding: 20mm;
-            transition: transform 0.3s ease;
+            transform-origin: top center;
         }
 
         /* Custom Scrollbar */
-        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar { width: 5px; }
         .custom-scroll::-webkit-scrollbar-track { background: transparent; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
 
         /* Section Styling */
         .section-title {
-            color: var(--theme-color, #6366f1);
-            font-size: 0.75rem;
+            color: var(--theme-color);
+            font-size: 0.7rem;
             font-weight: 800;
-            letter-spacing: 0.3em;
+            letter-spacing: 0.35em;
             text-transform: uppercase;
             border-bottom: 2px solid #f1f5f9;
-            padding-bottom: 8px;
-            margin-bottom: 20px;
+            padding-bottom: 6px;
+            margin-bottom: 16px;
         }
 
         #printModal {
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(8px);
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(12px);
             z-index: 100;
             align-items: center;
             justify-content: center;
+            animation: fadeIn 0.2s ease-out;
         }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         #printModal.active { display: flex; }
 
-        .drag-handle { cursor: grab; padding: 4px; }
+        .drag-handle { cursor: grab; }
         .drag-handle:active { cursor: grabbing; }
-        .ghost { opacity: 0.2; background: #6366f1; border-radius: 1rem; }
+        .ghost { opacity: 0.1; background: var(--theme-color); border-radius: 1.5rem; }
         
-        /* Editor Cards */
-        .editor-card {
-            transition: border-color 0.2s, box-shadow 0.2s;
+        /* Text balance for professional look */
+        .resume-page p, .resume-page h1 {
+            text-wrap: balance;
         }
-        .editor-card:hover {
-            border-color: #cbd5e1;
+
+        .editor-card {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .editor-card:focus-within {
+            border-color: var(--theme-color);
+            box-shadow: 0 4px 12px -2px rgba(99, 102, 241, 0.1);
         }
     </style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden">
 
     <!-- Navigation -->
-    <nav class="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center no-print shrink-0 z-10">
-        <div class="flex items-center gap-3">
-            <div class="bg-indigo-600 p-2 rounded-xl text-white shadow-lg shadow-indigo-100">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+    <nav class="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center no-print shrink-0 z-20 shadow-sm">
+        <div class="flex items-center gap-4">
+            <div class="bg-indigo-600 p-2.5 rounded-2xl text-white shadow-lg shadow-indigo-100">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
             </div>
             <div>
-                <h1 class="text-lg font-black tracking-tight text-slate-800 uppercase leading-none">Pro<span class="text-indigo-600">Resume</span></h1>
-                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">by Renzku</p>
+                <h1 class="text-xl font-black tracking-tighter text-slate-800 uppercase leading-none">Pro<span class="text-indigo-600">Resume</span></h1>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mt-1">Engine v2.0</p>
             </div>
         </div>
 
         <div class="flex items-center gap-4">
-            <div class="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+            <div class="flex items-center gap-3 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Theme</span>
                 <input type="color" id="theme-color" value="#6366f1" oninput="updatePreview()" class="w-6 h-6 rounded-md cursor-pointer border-none bg-transparent">
             </div>
-            <button onclick="showPrintModal()" class="bg-slate-900 hover:bg-black text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 shadow-xl shadow-slate-200 active:scale-95">
-                Print / Download
+            <button onclick="showPrintModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl font-bold text-sm transition-all flex items-center gap-2 shadow-xl shadow-indigo-100 active:scale-95">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export PDF
             </button>
         </div>
     </nav>
@@ -113,46 +125,48 @@
     <main class="flex flex-1 overflow-hidden">
         
         <!-- Editor Sidebar -->
-        <aside class="w-[480px] border-r border-slate-200 bg-white overflow-y-auto custom-scroll no-print p-8 space-y-8 pb-32">
-            <!-- Personal Info -->
+        <aside class="w-[500px] border-r border-slate-200 bg-white overflow-y-auto custom-scroll no-print p-8 space-y-8 pb-32 shadow-xl z-10">
+            <!-- Header section for Personal details -->
             <div class="space-y-6">
-                <div class="flex items-center gap-4 p-5 bg-indigo-50/50 rounded-2xl border border-indigo-100">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Personal Details</h2>
+                    <button onclick="resetData()" class="text-[9px] font-bold text-slate-300 uppercase hover:text-red-400 transition-colors">Reset All</button>
+                </div>
+                
+                <div class="flex items-center gap-5 p-5 bg-slate-50/50 rounded-3xl border border-slate-100">
                     <div class="relative group">
-                        <div id="photo-preview" class="w-20 h-20 bg-white border-2 border-dashed border-indigo-200 rounded-2xl flex items-center justify-center overflow-hidden shadow-inner">
-                            <span class="text-[10px] font-black text-indigo-300 uppercase">Photo</span>
+                        <div id="photo-preview" class="w-24 h-24 bg-white border-2 border-dashed border-slate-200 rounded-[2rem] flex items-center justify-center overflow-hidden shadow-inner transition-all group-hover:border-indigo-300">
+                            <span class="text-[9px] font-black text-slate-300 uppercase">Drop Photo</span>
                             <img id="profile-img" class="hidden absolute inset-0 w-full h-full object-cover">
                         </div>
-                        <input type="file" onchange="handlePhoto(this)" class="absolute inset-0 opacity-0 cursor-pointer">
+                        <input type="file" accept="image/*" onchange="handlePhoto(this)" class="absolute inset-0 opacity-0 cursor-pointer">
                     </div>
                     <div>
-                        <p class="text-[10px] font-black uppercase text-indigo-900 tracking-wider">Profile Image</p>
-                        <button onclick="removePhoto()" class="text-[10px] font-bold text-red-500 uppercase mt-1 hover:underline">Remove</button>
+                        <p class="text-[10px] font-black uppercase text-slate-800 tracking-wider">Identity Image</p>
+                        <p class="text-[9px] text-slate-400 mt-0.5">JPG, PNG (Max 2MB)</p>
+                        <button onclick="removePhoto()" class="text-[10px] font-bold text-red-500 uppercase mt-2 hover:underline">Clear Photo</button>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 gap-5">
-                    <div>
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Full Name</label>
-                        <input type="text" id="in-name" oninput="updatePreview()" placeholder="Alexander Pierce" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-4 ring-indigo-500/10 focus:bg-white transition-all">
+                    <div class="relative">
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest absolute -top-2 left-4 px-1 bg-white">Full Name</label>
+                        <input type="text" id="in-name" oninput="updatePreview()" placeholder="Alexander Pierce" class="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold outline-none focus:border-indigo-500 transition-all">
                     </div>
-                    <div>
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Professional Title</label>
-                        <input type="text" id="in-title" oninput="updatePreview()" placeholder="Senior Product Designer" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-4 ring-indigo-500/10 focus:bg-white transition-all">
+                    <div class="relative">
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest absolute -top-2 left-4 px-1 bg-white">Title</label>
+                        <input type="text" id="in-title" oninput="updatePreview()" placeholder="Senior Product Designer" class="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold outline-none focus:border-indigo-500 transition-all">
                     </div>
                     <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Email</label>
-                            <input type="text" id="in-email" oninput="updatePreview()" placeholder="alex@work.com" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-4 ring-indigo-500/10">
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Phone</label>
-                            <input type="text" id="in-phone" oninput="updatePreview()" placeholder="+1 555 000" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-4 ring-indigo-500/10">
-                        </div>
+                        <input type="text" id="in-email" oninput="updatePreview()" placeholder="Email Address" class="w-full px-4 py-4 bg-white border border-slate-200 rounded-2xl text-sm outline-none focus:border-indigo-500">
+                        <input type="text" id="in-phone" oninput="updatePreview()" placeholder="Phone Number" class="w-full px-4 py-4 bg-white border border-slate-200 rounded-2xl text-sm outline-none focus:border-indigo-500">
                     </div>
                 </div>
             </div>
 
             <hr class="border-slate-100">
+
+            <h2 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Content Sections</h2>
 
             <!-- Draggable Sections List -->
             <div id="dynamic-sections" class="space-y-6">
@@ -161,51 +175,62 @@
 
             <!-- Add Section UI -->
             <div class="space-y-4">
-                <div class="bg-slate-50 p-6 rounded-3xl border border-slate-200">
-                    <p class="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-4 text-center">Suggested Sections</p>
+                <div class="bg-indigo-50/30 p-8 rounded-[2.5rem] border border-indigo-100">
+                    <p class="text-[10px] font-black uppercase text-indigo-400 tracking-[0.3em] mb-6 text-center">Add Recommended Section</p>
                     <div class="grid grid-cols-2 gap-3">
-                        <button onclick="addSection('Objective', 'text')" class="px-4 py-3 bg-white border border-slate-200 rounded-xl text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:border-indigo-500 hover:text-indigo-600 transition-all shadow-sm">🎯 Objective</button>
-                        <button onclick="addSection('Experience', 'list')" class="px-4 py-3 bg-white border border-slate-200 rounded-xl text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:border-indigo-500 hover:text-indigo-600 transition-all shadow-sm">💼 Experience</button>
-                        <button onclick="addSection('Projects', 'list')" class="px-4 py-3 bg-white border border-slate-200 rounded-xl text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:border-indigo-500 hover:text-indigo-600 transition-all shadow-sm">🚀 Projects</button>
-                        <button onclick="addSection('Languages', 'tags')" class="px-4 py-3 bg-white border border-slate-200 rounded-xl text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:border-indigo-500 hover:text-indigo-600 transition-all shadow-sm">🌐 Languages</button>
+                        <button onclick="addSection('Summary', 'text')" class="px-4 py-3 bg-white border border-slate-200 rounded-2xl text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:border-indigo-500 hover:text-indigo-600 transition-all shadow-sm">🎯 Summary</button>
+                        <button onclick="addSection('Experience', 'list')" class="px-4 py-3 bg-white border border-slate-200 rounded-2xl text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:border-indigo-500 hover:text-indigo-600 transition-all shadow-sm">💼 Work</button>
+                        <button onclick="addSection('Education', 'list')" class="px-4 py-3 bg-white border border-slate-200 rounded-2xl text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:border-indigo-500 hover:text-indigo-600 transition-all shadow-sm">🎓 Education</button>
+                        <button onclick="addSection('Skills', 'tags')" class="px-4 py-3 bg-white border border-slate-200 rounded-2xl text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:border-indigo-500 hover:text-indigo-600 transition-all shadow-sm">⚡ Skills</button>
                     </div>
-                    <button onclick="addSection('Custom Section', 'text')" class="w-full mt-4 py-3 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
-                        + Create Blank Section
+                    <button onclick="addSection('New Section', 'text')" class="w-full mt-4 py-4 bg-white border-2 border-dashed border-indigo-200 text-indigo-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-50 transition-all">
+                        + Custom Section
                     </button>
                 </div>
             </div>
             
-            <div class="pt-8 text-center opacity-40">
-                <p class="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Created by Renzku</p>
-                <p class="text-[8px] font-bold text-slate-300 mt-1 uppercase">© 2024 ProResume Engine</p>
+            <div class="pt-12 text-center">
+                <p class="text-[10px] font-black uppercase tracking-[0.5em] text-slate-300">Renzku Design Systems</p>
+                <p class="text-[8px] font-bold text-slate-300 mt-2 uppercase tracking-widest">© 2024 • Build for success</p>
             </div>
         </aside>
 
         <!-- Preview Area -->
         <section class="flex-1 bg-slate-100 overflow-y-auto p-12 flex justify-center custom-scroll">
-            <div id="resume-canvas" class="resume-page">
-                <!-- Content Injected -->
+            <div id="resume-canvas-container">
+                <div id="resume-canvas" class="resume-page">
+                    <!-- Content Injected -->
+                </div>
             </div>
         </section>
     </main>
 
     <!-- Print Modal -->
     <div id="printModal" class="no-print">
-        <div class="bg-white p-10 rounded-[3rem] shadow-2xl max-w-md w-full text-center border border-slate-100">
-            <div class="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        <div class="bg-white p-12 rounded-[3.5rem] shadow-2xl max-w-md w-full text-center border border-slate-100 relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-2 bg-indigo-600"></div>
+            <div class="w-24 h-24 bg-indigo-50 text-indigo-600 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 shadow-inner">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
             </div>
-            <h2 class="text-2xl font-black text-slate-900 mb-2">Ready to Print</h2>
-            <p class="text-slate-500 text-sm mb-8 leading-relaxed">Ensure <span class="font-bold text-slate-800">Background Graphics</span> is enabled in your browser print settings for the best results.</p>
+            <h2 class="text-3xl font-black text-slate-900 mb-3 tracking-tighter">Ready to Save?</h2>
+            <p class="text-slate-500 text-sm mb-10 leading-relaxed px-4">
+                When the print dialog opens, set the <span class="text-slate-900 font-bold">Destination</span> to "Save as PDF" and ensure <span class="text-slate-900 font-bold">Background Graphics</span> is enabled.
+            </p>
             <div class="flex flex-col gap-3">
-                <button onclick="window.print()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-xl shadow-indigo-200 active:scale-95 transition-all">Start Printing</button>
-                <button onclick="closeModal()" class="w-full bg-slate-100 text-slate-500 py-4 rounded-2xl font-bold hover:bg-slate-200 transition-all">Dismiss</button>
+                <button onclick="window.print()" class="w-full bg-indigo-600 text-white py-5 rounded-[1.5rem] font-bold text-lg shadow-xl shadow-indigo-100 active:scale-95 transition-all">Download PDF</button>
+                <button onclick="closeModal()" class="w-full bg-slate-100 text-slate-500 py-4 rounded-[1.5rem] font-bold hover:bg-slate-200 transition-all">Go Back</button>
             </div>
         </div>
     </div>
 
     <script>
-        let state = {
+        // State management with LocalStorage
+        let defaultState = {
+            name: 'Alexander Pierce',
+            title: 'Senior Product Designer',
+            email: 'alex@work.com',
+            phone: '+1 555 000 1234',
+            theme: '#6366f1',
             photo: '',
             sections: [
                 { id: 'sec-1', title: 'Summary', type: 'text', content: 'Seasoned Product Designer with 5+ years of experience in creating user-centric digital products. Expert in translating complex business requirements into elegant, high-performance interfaces.' },
@@ -214,16 +239,36 @@
             ]
         };
 
+        let state = JSON.parse(localStorage.getItem('renzku_resume_data')) || defaultState;
+
+        function saveToLocal() {
+            localStorage.setItem('renzku_resume_data', JSON.stringify(state));
+        }
+
+        // Initialize UI values from state
+        function initInputs() {
+            document.getElementById('in-name').value = state.name;
+            document.getElementById('in-title').value = state.title;
+            document.getElementById('in-email').value = state.email;
+            document.getElementById('in-phone').value = state.phone;
+            document.getElementById('theme-color').value = state.theme;
+            if (state.photo) {
+                const img = document.getElementById('profile-img');
+                img.src = state.photo;
+                img.classList.remove('hidden');
+            }
+        }
+
         // Initialize Sortable
         const sortableList = document.getElementById('dynamic-sections');
         new Sortable(sortableList, {
-            animation: 250,
+            animation: 300,
             handle: '.drag-handle',
             ghostClass: 'ghost',
             onEnd: function() {
                 const newOrderIds = Array.from(sortableList.querySelectorAll('.editor-card')).map(el => el.dataset.id);
-                const reorderedSections = newOrderIds.map(id => state.sections.find(s => s.id === id));
-                state.sections = reorderedSections;
+                state.sections = newOrderIds.map(id => state.sections.find(s => s.id === id));
+                saveToLocal();
                 updatePreview();
             }
         });
@@ -236,6 +281,7 @@
                     const img = document.getElementById('profile-img');
                     img.src = state.photo;
                     img.classList.remove('hidden');
+                    saveToLocal();
                     updatePreview();
                 };
                 reader.readAsDataURL(input.files[0]);
@@ -245,75 +291,109 @@
         function removePhoto() {
             state.photo = '';
             document.getElementById('profile-img').classList.add('hidden');
+            saveToLocal();
             updatePreview();
+        }
+
+        function resetData() {
+            if(confirm("Are you sure? This will delete all current progress.")) {
+                state = JSON.parse(JSON.stringify(defaultState));
+                initInputs();
+                renderEditor();
+                updatePreview();
+                saveToLocal();
+            }
         }
 
         function addSection(title = 'New Section', type = 'text') {
             const id = 'sec-' + Date.now();
             const newSection = { id, title, type, content: '' };
             if (type === 'list') newSection.items = [{ role: '', org: '', date: '', desc: '' }];
-            
             state.sections.push(newSection);
             renderEditor();
             updatePreview();
+            saveToLocal();
         }
 
         function removeSection(id) {
             state.sections = state.sections.filter(s => s.id !== id);
             renderEditor();
             updatePreview();
+            saveToLocal();
         }
 
         function updateSection(id, key, value) {
             const sec = state.sections.find(s => s.id === id);
             sec[key] = value;
+            saveToLocal();
             updatePreview();
         }
 
-        // Add item for list-type sections
         function addListItem(sid) {
             const sec = state.sections.find(s => s.id === sid);
             sec.items.push({ role: '', org: '', date: '', desc: '' });
             renderEditor();
-            updatePreview();
+            saveToLocal();
         }
 
         function updateListItem(sid, idx, key, value) {
             state.sections.find(s => s.id === sid).items[idx][key] = value;
+            saveToLocal();
             updatePreview();
+        }
+
+        function removeListItem(sid, idx) {
+            const sec = state.sections.find(s => s.id === sid);
+            sec.items.splice(idx, 1);
+            renderEditor();
+            updatePreview();
+            saveToLocal();
         }
 
         function renderEditor() {
             const container = document.getElementById('dynamic-sections');
             container.innerHTML = state.sections.map(s => `
-                <div class="editor-card p-6 bg-white rounded-2xl border border-slate-200 shadow-sm relative group" data-id="${s.id}">
+                <div class="editor-card p-6 bg-white rounded-[2rem] border border-slate-200 shadow-sm relative" data-id="${s.id}">
                     <div class="flex justify-between items-center mb-5">
                         <div class="flex items-center gap-3">
-                            <div class="drag-handle text-slate-300 hover:text-indigo-400 transition-colors">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+                            <div class="drag-handle text-slate-300 hover:text-indigo-400 p-1">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>
                             </div>
-                            <input type="text" value="${s.title}" oninput="updateSection('${s.id}', 'title', this.value)" class="bg-transparent font-black text-[10px] uppercase tracking-[0.2em] text-slate-800 outline-none w-full">
+                            <input type="text" value="${s.title}" oninput="updateSection('${s.id}', 'title', this.value)" class="bg-transparent font-black text-[10px] uppercase tracking-[0.3em] text-slate-800 outline-none w-full">
                         </div>
-                        <button onclick="removeSection('${s.id}')" class="text-slate-300 hover:text-red-500 transition-colors text-xl font-light">×</button>
+                        <button onclick="removeSection('${s.id}')" class="w-6 h-6 rounded-full bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center text-sm font-bold">×</button>
                     </div>
                     
                     ${s.type === 'text' ? `
-                        <textarea oninput="updateSection('${s.id}', 'content', this.value)" class="w-full p-4 text-sm bg-slate-50 border border-slate-100 rounded-xl h-28 outline-none focus:ring-4 ring-indigo-500/5 focus:bg-white transition-all">${s.content}</textarea>
+                        <textarea oninput="updateSection('${s.id}', 'content', this.value)" class="w-full p-4 text-sm bg-slate-50 border border-slate-100 rounded-2xl h-32 outline-none focus:bg-white transition-all resize-none">${s.content}</textarea>
                     ` : s.type === 'tags' ? `
-                        <input type="text" value="${s.content || ''}" oninput="updateSection('${s.id}', 'content', this.value)" placeholder="Separate items with commas..." class="w-full p-4 text-sm bg-slate-50 border border-slate-100 rounded-xl outline-none focus:bg-white transition-all">
+                        <input type="text" value="${s.content || ''}" oninput="updateSection('${s.id}', 'content', this.value)" placeholder="JavaScript, React, Teamwork..." class="w-full p-4 text-sm bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:bg-white transition-all">
                     ` : `
                         <div class="space-y-4">
                             ${s.items.map((item, idx) => `
-                                <div class="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-3">
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <input type="text" placeholder="Role" value="${item.role}" oninput="updateListItem('${s.id}', ${idx}, 'role', this.value)" class="p-2 text-xs font-bold rounded-lg border-none bg-white">
-                                        <input type="text" placeholder="Date" value="${item.date}" oninput="updateListItem('${s.id}', ${idx}, 'date', this.value)" class="p-2 text-xs rounded-lg border-none bg-white">
+                                <div class="p-5 bg-slate-50/50 rounded-2xl border border-slate-100 space-y-3 relative">
+                                    <button onclick="removeListItem('${s.id}', ${idx})" class="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-xs">Delete</button>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div class="space-y-1">
+                                            <span class="text-[8px] font-black uppercase text-slate-400 ml-1">Position / Degree</span>
+                                            <input type="text" placeholder="Title" value="${item.role}" oninput="updateListItem('${s.id}', ${idx}, 'role', this.value)" class="w-full p-2.5 text-xs font-bold rounded-xl border border-slate-100 bg-white shadow-sm">
+                                        </div>
+                                        <div class="space-y-1">
+                                            <span class="text-[8px] font-black uppercase text-slate-400 ml-1">Duration</span>
+                                            <input type="text" placeholder="2020 - Present" value="${item.date}" oninput="updateListItem('${s.id}', ${idx}, 'date', this.value)" class="w-full p-2.5 text-xs rounded-xl border border-slate-100 bg-white shadow-sm">
+                                        </div>
                                     </div>
-                                    <input type="text" placeholder="Organization" value="${item.org}" oninput="updateListItem('${s.id}', ${idx}, 'org', this.value)" class="w-full p-2 text-xs rounded-lg border-none bg-white">
-                                    <textarea placeholder="Description" oninput="updateListItem('${s.id}', ${idx}, 'desc', this.value)" class="w-full p-2 text-xs rounded-lg border-none bg-white h-16">${item.desc}</textarea>
+                                    <div class="space-y-1">
+                                        <span class="text-[8px] font-black uppercase text-slate-400 ml-1">Institution / Company</span>
+                                        <input type="text" placeholder="Stanford University" value="${item.org}" oninput="updateListItem('${s.id}', ${idx}, 'org', this.value)" class="w-full p-2.5 text-xs font-semibold rounded-xl border border-slate-100 bg-white shadow-sm">
+                                    </div>
+                                    <div class="space-y-1">
+                                        <span class="text-[8px] font-black uppercase text-slate-400 ml-1">Details</span>
+                                        <textarea placeholder="Describe achievements..." oninput="updateListItem('${s.id}', ${idx}, 'desc', this.value)" class="w-full p-3 text-xs rounded-xl border border-slate-100 bg-white shadow-sm h-20 resize-none">${item.desc}</textarea>
+                                    </div>
                                 </div>
                             `).join('')}
-                            <button onclick="addListItem('${s.id}')" class="text-[9px] font-black uppercase text-indigo-600 tracking-widest">+ Add Entry</button>
+                            <button onclick="addListItem('${s.id}')" class="w-full py-3 border-2 border-dashed border-slate-200 text-slate-400 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-50">+ Add Item</button>
                         </div>
                     `}
                 </div>
@@ -321,21 +401,25 @@
         }
 
         function updatePreview() {
-            const color = document.getElementById('theme-color').value;
-            document.documentElement.style.setProperty('--theme-color', color);
+            state.name = document.getElementById('in-name').value;
+            state.title = document.getElementById('in-title').value;
+            state.email = document.getElementById('in-email').value;
+            state.phone = document.getElementById('in-phone').value;
+            state.theme = document.getElementById('theme-color').value;
+            document.documentElement.style.setProperty('--theme-color', state.theme);
             
             const canvas = document.getElementById('resume-canvas');
-            const name = (document.getElementById('in-name').value || "YOUR NAME").toUpperCase();
-            const title = (document.getElementById('in-title').value || "PROFESSIONAL TITLE").toUpperCase();
-            const email = document.getElementById('in-email').value || "email@work.com";
-            const phone = document.getElementById('in-phone').value || "123-456-7890";
+            const name = (state.name || "YOUR NAME").toUpperCase();
+            const title = (state.title || "PROFESSIONAL TITLE").toUpperCase();
+            const email = state.email || "email@work.com";
+            const phone = state.phone || "123-456-7890";
 
             let html = `
-                <header class="flex justify-between items-start gap-10 mb-12">
+                <header class="flex justify-between items-start gap-10 mb-10">
                     <div class="flex-1">
-                        <h1 class="text-6xl font-black text-slate-900 tracking-tighter leading-none mb-3">${name}</h1>
-                        <p class="text-xl font-bold tracking-[0.25em] uppercase mb-8" style="color: ${color}">${title}</p>
-                        <div class="flex gap-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">
+                        <h1 class="text-6xl font-[800] text-slate-900 tracking-tighter leading-[0.9] mb-4">${name}</h1>
+                        <p class="text-xl font-bold tracking-[0.25em] uppercase mb-8" style="color: ${state.theme}">${title}</p>
+                        <div class="flex flex-wrap gap-x-8 gap-y-2 text-[11px] font-[800] text-slate-400 uppercase tracking-[0.15em]">
                             <div class="flex items-center gap-2">
                                 <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>
                                 <span>${email}</span>
@@ -346,7 +430,11 @@
                             </div>
                         </div>
                     </div>
-                    ${state.photo ? `<div class="p-1.5 bg-white shadow-2xl rounded-2xl border border-slate-50 rotate-2 shrink-0"><img src="${state.photo}" class="w-32 h-32 object-cover rounded-xl"></div>` : ''}
+                    ${state.photo ? `
+                        <div class="p-2 bg-white shadow-2xl rounded-3xl border border-slate-50 rotate-3 shrink-0 ring-1 ring-slate-100">
+                            <img src="${state.photo}" class="w-32 h-32 object-cover rounded-2xl">
+                        </div>
+                    ` : ''}
                 </header>
                 <div class="space-y-10">
             `;
@@ -355,28 +443,28 @@
                 let contentHtml = '';
                 
                 if (s.type === 'text' && s.content.trim()) {
-                    contentHtml = `<p class="text-[13px] leading-relaxed text-slate-600 whitespace-pre-line">${s.content}</p>`;
+                    contentHtml = `<p class="text-[14px] leading-relaxed text-slate-600 whitespace-pre-line">${s.content}</p>`;
                 } else if (s.type === 'tags' && s.content.trim()) {
                     const tags = s.content.split(',').map(t => t.trim()).filter(t => t);
-                    contentHtml = `<div class="flex flex-wrap gap-2">${tags.map(t => `<span class="px-2.5 py-1 bg-slate-50 border border-slate-100 rounded text-[10px] font-black text-slate-500 uppercase tracking-wider">${t}</span>`).join('')}</div>`;
+                    contentHtml = `<div class="flex flex-wrap gap-2.5">${tags.map(t => `<span class="px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-lg text-[10px] font-black text-slate-500 uppercase tracking-widest">${t}</span>`).join('')}</div>`;
                 } else if (s.type === 'list') {
                     contentHtml = s.items.map(i => {
                         if (!i.role && !i.org) return '';
                         return `
-                        <div class="mb-6 last:mb-0">
+                        <div class="mb-6 last:mb-0 break-inside-avoid">
                             <div class="flex justify-between items-baseline mb-1">
-                                <h5 class="text-[15px] font-black text-slate-900 leading-tight">${i.role}</h5>
+                                <h5 class="text-[16px] font-black text-slate-900 leading-tight">${i.role}</h5>
                                 <span class="text-[9px] font-black text-slate-300 uppercase tracking-widest shrink-0 ml-4">${i.date}</span>
                             </div>
-                            <div class="text-[11px] font-black uppercase tracking-wider mb-2" style="color: ${color}">${i.org}</div>
+                            <div class="text-[11px] font-[800] uppercase tracking-[0.2em] mb-3" style="color: ${state.theme}">${i.org}</div>
                             <p class="text-[13px] text-slate-600 leading-relaxed whitespace-pre-line">${i.desc}</p>
                         </div>
                     `}).join('');
                 }
 
                 if (contentHtml) {
-                    html += `<section>
-                        <div class="section-title" style="color: ${color}">${s.title}</div>
+                    html += `<section class="break-inside-avoid">
+                        <div class="section-title">${s.title}</div>
                         ${contentHtml}
                     </section>`;
                 }
@@ -384,13 +472,30 @@
 
             html += `</div>`;
             canvas.innerHTML = html;
+            saveToLocal();
         }
 
+        // Handle Responsive Scale to fit
+        function scalePreview() {
+            const container = document.getElementById('resume-canvas-container');
+            const canvas = document.getElementById('resume-canvas');
+            const containerWidth = container.offsetWidth;
+            const scale = (containerWidth - 40) / 794; // 794 is 210mm in pixels at 96dpi
+            if (scale < 1) {
+                canvas.style.transform = `scale(${scale})`;
+            } else {
+                canvas.style.transform = `none`;
+            }
+        }
+
+        window.addEventListener('resize', scalePreview);
         function showPrintModal() { document.getElementById('printModal').classList.add('active'); }
         function closeModal() { document.getElementById('printModal').classList.remove('active'); }
 
+        initInputs();
         renderEditor();
         updatePreview();
+        setTimeout(scalePreview, 100);
     </script>
 </body>
 </html>
