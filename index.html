@@ -308,18 +308,21 @@
             await initDB();
             const tx = db.transaction(STORE_NAME, 'readonly');
             const store = tx.objectStore(STORE_NAME);
-            let all = await new Promise(r => store.getAll().onsuccess = (e) => r(e.target.result));
+            const all = await new Promise(r => store.getAll().onsuccess = (e) => r(e.target.result));
 
-            // If no resumes exist, create the Main one and WAIT for it to save
             if (all.length === 0) {
+                // Database is totally empty
                 activeId = 'res-main'; 
                 state = { id: activeId, label: 'Main Resume', ...DEFAULT_TEMPLATE };
-                await saveToDB(); // This ensures it's in the DB
-                localStorage.setItem('active_resume_id', activeId);
                 
-                // Refresh the 'all' list so the selector has data immediately
-                const refreshTx = db.transaction(STORE_NAME, 'readonly');
-                all = await new Promise(r => refreshTx.objectStore(STORE_NAME).getAll().onsuccess = (e) => r(e.target.result));
+                // Save and THEN restart the app once the save is confirmed
+                const saveTx = db.transaction(STORE_NAME, 'readwrite');
+                const saveReq = saveTx.objectStore(STORE_NAME).add(state);
+                saveReq.onsuccess = () => {
+                    localStorage.setItem('active_resume_id', 'res-main');
+                    startApp(); // Restart now that data exists
+                };
+                return; // Stop this execution here
             } else {
                 const savedId = localStorage.getItem('active_resume_id');
                 const found = all.find(r => r.id === savedId);
@@ -333,7 +336,6 @@
                 }
             }
             
-            // Now update the UI - 'all' is guaranteed to have at least one item here
             updateSelector(all); 
             initInputs(); 
             renderEditor(); 
@@ -627,8 +629,25 @@
         }
 
         function resetData() {
-            if(confirm("Clear current version content?")) { 
-                state.sections = []; renderEditor(); updatePreview(); saveToDB();
+            if(confirm("This will reset all fields (including name and contact) to the default template. Proceed?")) { 
+                // Keep the ID and Label, but reset everything else
+                const currentId = state.id;
+                const currentLabel = state.label;
+                
+                state = { 
+                    ...DEFAULT_TEMPLATE,
+                    id: currentId,
+                    label: currentLabel 
+                };
+                
+                // Update the form inputs to match the reset state
+                initInputs(); 
+                // Re-render the list of sections
+                renderEditor(); 
+                // Update the visual resume
+                updatePreview(); 
+                // Save the cleared state to Database
+                saveToDB();
             }
         }
 
