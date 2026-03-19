@@ -307,13 +307,19 @@
         async function startApp() {
             await initDB();
             const tx = db.transaction(STORE_NAME, 'readonly');
-            const all = await new Promise(r => tx.objectStore(STORE_NAME).getAll().onsuccess = (e) => r(e.target.result));
+            const store = tx.objectStore(STORE_NAME);
+            let all = await new Promise(r => store.getAll().onsuccess = (e) => r(e.target.result));
 
+            // If no resumes exist, create the Main one and WAIT for it to save
             if (all.length === 0) {
                 activeId = 'res-main'; 
                 state = { id: activeId, label: 'Main Resume', ...DEFAULT_TEMPLATE };
-                await saveToDB();
+                await saveToDB(); // This ensures it's in the DB
                 localStorage.setItem('active_resume_id', activeId);
+                
+                // Refresh the 'all' list so the selector has data immediately
+                const refreshTx = db.transaction(STORE_NAME, 'readonly');
+                all = await new Promise(r => refreshTx.objectStore(STORE_NAME).getAll().onsuccess = (e) => r(e.target.result));
             } else {
                 const savedId = localStorage.getItem('active_resume_id');
                 const found = all.find(r => r.id === savedId);
@@ -327,6 +333,7 @@
                 }
             }
             
+            // Now update the UI - 'all' is guaranteed to have at least one item here
             updateSelector(all); 
             initInputs(); 
             renderEditor(); 
@@ -335,26 +342,39 @@
             window.addEventListener('resize', scalePreview);
         }
 
-        // FIXED LOGIC: Save current edits to New Profile AND Reset Main
+        function updateSelector(all) {
+            const sel = document.getElementById('resume-selector');
+            if(!sel) return;
+            
+            // Safety: If somehow 'all' is still empty, manually add the Main Resume label
+            if (all.length === 0) {
+                sel.innerHTML = `<option value="res-main">Main Resume</option>`;
+                return;
+            }
+
+            sel.innerHTML = all.map(r => `
+                <option value="${r.id}" ${r.id === activeId ? 'selected' : ''}>
+                    ${r.label || 'Untitled'}
+                </option>
+            `).join('');
+        }
+
         async function createNewResume() {
             const label = prompt("Enter a name for this profile (e.g. Test 1):");
             if (!label) return;
             
-            // 1. Capture current edits into a new object
             const newId = 'res-' + Date.now();
             const newProfileData = { 
-                ...state,      // Copy everything currently on screen
-                id: newId,     // Give it a new unique ID
-                label: label   // Give it the name the user typed
+                ...state,      
+                id: newId,     
+                label: label   
             };
             
             const tx = db.transaction(STORE_NAME, 'readwrite');
             const store = tx.objectStore(STORE_NAME);
             
-            // 2. Save the "Test 1" profile with the current data
             await new Promise(r => store.add(newProfileData).onsuccess = r);
 
-            // 3. Reset the "Main Resume" back to default if we are currently on Main
             if (activeId === 'res-main') {
                 const resetMain = { 
                     id: 'res-main', 
@@ -364,7 +384,6 @@
                 await new Promise(r => store.put(resetMain).onsuccess = r);
             }
 
-            // 4. Switch to the newly created profile and refresh
             localStorage.setItem('active_resume_id', newId);
             window.location.reload(); 
         }
@@ -390,6 +409,7 @@
 
         function updateSelector(all) {
             const sel = document.getElementById('resume-selector');
+            if(!sel) return;
             sel.innerHTML = all.map(r => `<option value="${r.id}" ${r.id === activeId ? 'selected' : ''}>${r.label || 'Untitled'}</option>`).join('');
         }
 
@@ -431,7 +451,8 @@
             document.querySelectorAll('.style-btn').forEach((btn, idx) => {
                 btn.classList.toggle('active', (idx + 1) === state.styleIndex);
             });
-            document.getElementById('resume-canvas').className = `resume-page style-${state.styleIndex}`;
+            const canvas = document.getElementById('resume-canvas');
+            if(canvas) canvas.className = `resume-page style-${state.styleIndex}`;
         }
 
         function checkAndAdd(title, type) {
@@ -492,7 +513,8 @@
                     state.photoPos = { x: 50, y: 50 };
                     document.getElementById('profile-img').src = state.photo;
                     document.getElementById('profile-img').classList.remove('hidden');
-                    saveToDB(); updatePreview();
+                    saveToDB(); // FIX: Save photo immediately to DB
+                    updatePreview();
                 };
                 reader.readAsDataURL(input.files[0]);
             }
@@ -599,7 +621,7 @@
         function scalePreview() {
             const container = document.getElementById('resume-canvas-container');
             const canvas = document.getElementById('resume-canvas');
-            if (!container || !canvas) return;
+            if (!container || !canvas || container.offsetWidth === 0) return; // FIX: Added safety check
             const scale = (container.offsetWidth - 80) / 794; 
             canvas.style.transform = scale < 1 ? `scale(${scale})` : `scale(1)`;
         }
