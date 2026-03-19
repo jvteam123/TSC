@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProResume | Ultimate Deployment v1.0</title>
+    <title>ProResume | Ultimate IndexedDB v1.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700;900&family=JetBrains+Mono:wght@400;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Outfit:wght@300;400;600;900&display=swap" rel="stylesheet">
@@ -114,9 +114,20 @@
                 <h1 class="text-lg font-black tracking-tighter text-slate-800 uppercase leading-none">Pro<span class="text-indigo-600">Resume</span></h1>
                 <div id="save-indicator" class="flex items-center gap-1.5 mt-1">
                     <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
-                    <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Live Auto-Save</span>
+                    <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest">IndexedDB Active</span>
                 </div>
             </div>
+        </div>
+
+        <div class="flex items-center gap-3 bg-slate-100 p-1.5 rounded-xl border border-slate-200 no-print">
+            <select id="resume-selector" onchange="switchResume(this.value)" class="bg-transparent text-[10px] font-black uppercase tracking-wider text-slate-600 outline-none px-2 cursor-pointer max-w-[150px]">
+                </select>
+            <button onclick="createNewResume()" class="p-1.5 bg-white rounded-lg shadow-sm hover:text-indigo-600 transition-colors" title="New Resume">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </button>
+            <button onclick="deleteCurrentResume()" class="p-1.5 bg-white rounded-lg shadow-sm hover:text-red-500 transition-colors" title="Delete Resume">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
         </div>
 
         <div class="flex items-center gap-6">
@@ -246,52 +257,118 @@
             if (tipEl) tipEl.innerText = tips[tipIndex];
         }, 8000);
 
-        let state = JSON.parse(localStorage.getItem('pro_resume_v3.9')) || {
-            name: 'Your Name',
-            title: 'Lead Designer',
-            email: 'hello@renzku.com',
-            phone: '+63 900 000 0000',
-            location: 'Cebu, Philippines',
-            theme: '#6366f1',
-            styleIndex: 1,
-            photo: '',
-            photoPos: { x: 50, y: 50 },
-            sections: [
-                { id: 's1', title: 'Summary', type: 'text', content: 'Strategic professional with a strong track record of success in project management and creative design.' },
-                { id: 's2', title: 'Work Experience', type: 'list', items: [{ role: 'Senior Designer', org: 'Creative Studio', year: '2022 - 2026', loc: 'Cebu City', desc: 'Managed multiple high-stakes branding projects for regional clients.' }] }
-            ]
-        };
-
+        // --- INDEXED DB ENGINE ---
+        const DB_NAME = 'ProResumeDB_v3';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'resumes';
+        let db;
+        let activeId = localStorage.getItem('active_resume_id');
+        let state = {};
         let isDraggingPhoto = false;
         let startX, startY;
 
-        function saveState() {
-            localStorage.setItem('pro_resume_v3.9', JSON.stringify(state));
-            const ind = document.getElementById('save-indicator');
-            ind.classList.add('visible');
-            setTimeout(() => ind.classList.remove('visible'), 1500);
+        async function initDB() {
+            return new Promise((resolve) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                };
+                request.onsuccess = (e) => { db = e.target.result; resolve(); };
+            });
         }
 
-        window.onload = () => {
-            initInputs(); 
-            renderEditor(); 
-            updatePreview(); 
-            initSortable();
-            scalePreview();
-            window.addEventListener('resize', scalePreview);
-        };
+        async function saveToDB() {
+            if (!db || !activeId) return;
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            await store.put({ ...state, id: activeId });
+            
+            const ind = document.getElementById('save-indicator');
+            if (ind) {
+                ind.classList.add('visible');
+                setTimeout(() => ind.classList.remove('visible'), 1000);
+            }
+        }
 
+        async function startApp() {
+            await initDB();
+            const tx = db.transaction(STORE_NAME, 'readonly');
+            const all = await new Promise(r => tx.objectStore(STORE_NAME).getAll().onsuccess = (e) => r(e.target.result));
+
+            if (all.length === 0) {
+                activeId = 'res-' + Date.now();
+                state = { 
+                    label: 'Main Resume',
+                    name: 'Your Name',
+                    title: 'Lead Designer',
+                    email: 'hello@renzku.com',
+                    phone: '+63 900 000 0000',
+                    location: 'Cebu, Philippines',
+                    theme: '#6366f1',
+                    styleIndex: 1,
+                    photo: '',
+                    photoPos: { x: 50, y: 50 },
+                    sections: [
+                        { id: 's1', title: 'Summary', type: 'text', content: 'Strategic professional with a strong track record of success.' },
+                        { id: 's2', title: 'Work Experience', type: 'list', items: [{ role: 'Senior Designer', org: 'Creative Studio', year: '2022 - 2026', loc: 'Cebu City', desc: 'Managed high-stakes branding projects.' }] }
+                    ]
+                };
+                await saveToDB();
+            } else {
+                if (!activeId || !all.find(r => r.id === activeId)) activeId = all[0].id;
+                state = all.find(r => r.id === activeId);
+            }
+            localStorage.setItem('active_resume_id', activeId);
+            updateSelector(all); initInputs(); renderEditor(); updatePreview(); initSortable();
+            window.addEventListener('resize', scalePreview);
+        }
+
+        async function createNewResume() {
+            const label = prompt("Resume Label (e.g., UI Designer, Marketing Role):");
+            if (!label) return;
+            activeId = 'res-' + Date.now();
+            state = { label, name: '', title: '', email: '', phone: '', location: '', theme: '#6366f1', styleIndex: 1, photo: '', photoPos: { x: 50, y: 50 }, sections: [] };
+            await saveToDB();
+            location.reload();
+        }
+
+        async function switchResume(id) {
+            activeId = id;
+            localStorage.setItem('active_resume_id', id);
+            location.reload();
+        }
+
+        async function deleteCurrentResume() {
+            const tx = db.transaction(STORE_NAME, 'readonly');
+            const all = await new Promise(r => tx.objectStore(STORE_NAME).getAll().onsuccess = (e) => r(e.target.result));
+            if (all.length <= 1) return alert("Keep at least one resume.");
+            if (confirm("Delete this resume version?")) {
+                const delTx = db.transaction(STORE_NAME, 'readwrite');
+                delTx.objectStore(STORE_NAME).delete(activeId);
+                localStorage.removeItem('active_resume_id');
+                location.reload();
+            }
+        }
+
+        function updateSelector(all) {
+            const sel = document.getElementById('resume-selector');
+            sel.innerHTML = all.map(r => `<option value="${r.id}" ${r.id === activeId ? 'selected' : ''}>${r.label || 'Untitled'}</option>`).join('');
+        }
+
+        // --- UI & EDITOR LOGIC ---
         function initInputs() {
-            document.getElementById('in-name').value = state.name;
-            document.getElementById('in-title').value = state.title;
-            document.getElementById('in-email').value = state.email;
-            document.getElementById('in-phone').value = state.phone;
-            document.getElementById('in-location').value = state.location;
-            document.getElementById('theme-color').value = state.theme;
+            document.getElementById('in-name').value = state.name || '';
+            document.getElementById('in-title').value = state.title || '';
+            document.getElementById('in-email').value = state.email || '';
+            document.getElementById('in-phone').value = state.phone || '';
+            document.getElementById('in-location').value = state.location || '';
+            document.getElementById('theme-color').value = state.theme || '#6366f1';
             updateStyleButtons();
             if (state.photo) {
-                document.getElementById('profile-img').src = state.photo;
-                document.getElementById('profile-img').classList.remove('hidden');
+                const pImg = document.getElementById('profile-img');
+                pImg.src = state.photo;
+                pImg.classList.remove('hidden');
             }
         }
 
@@ -302,14 +379,14 @@
                 onEnd: () => {
                     const ids = Array.from(document.getElementById('dynamic-sections').children).map(c => c.dataset.id);
                     state.sections = ids.map(id => state.sections.find(s => s.id === id));
-                    saveState(); updatePreview();
+                    saveToDB(); updatePreview();
                 }
             });
         }
 
         function changeStyle(i) {
             state.styleIndex = i;
-            updateStyleButtons(); updatePreview(); saveState();
+            updateStyleButtons(); updatePreview(); saveToDB();
         }
 
         function updateStyleButtons() {
@@ -319,32 +396,10 @@
             document.getElementById('resume-canvas').className = `resume-page style-${state.styleIndex}`;
         }
 
-        function handlePhoto(input) {
-            if (input.files?.[0]) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    state.photo = e.target.result;
-                    state.photoPos = { x: 50, y: 50 };
-                    document.getElementById('profile-img').src = state.photo;
-                    document.getElementById('profile-img').classList.remove('hidden');
-                    saveState(); updatePreview();
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-
-        function removePhoto() {
-            state.photo = ''; 
-            document.getElementById('profile-img').classList.add('hidden');
-            document.getElementById('photo-upload').value = '';
-            saveState(); updatePreview();
-        }
-
-        // --- NEW NOTIFICATION LOGIC ---
         function checkAndAdd(title, type) {
             const exists = state.sections.some(s => s.title.toLowerCase() === title.toLowerCase());
             if (exists) {
-                const confirmAdd = confirm(`The "${title}" section is already added. Do you want to add another one?`);
+                const confirmAdd = confirm(`The "${title}" section is already added. Add another?`);
                 if (!confirmAdd) return;
             }
             addSection(title, type);
@@ -358,17 +413,17 @@
             else if (type === 'edu') newSec.items = [{ degree: '', school: '', year: '', loc: '' }];
             else if (type === 'refs') newSec.items = [{ name: '', relation: '', company: '', contact: '' }];
             state.sections.push(newSec);
-            renderEditor(); updatePreview(); saveState();
+            renderEditor(); updatePreview(); saveToDB();
         }
 
         function updateSection(id, key, val) {
             const s = state.sections.find(sec => sec.id === id);
-            if (s) { s[key] = val; saveState(); updatePreview(); }
+            if (s) { s[key] = val; saveToDB(); updatePreview(); }
         }
 
         function updateItem(sid, idx, key, val) {
             const s = state.sections.find(sec => sec.id === sid);
-            if (s && s.items[idx]) { s.items[idx][key] = val; saveState(); updatePreview(); }
+            if (s && s.items[idx]) { s.items[idx][key] = val; saveToDB(); updatePreview(); }
         }
 
         function addItem(sid) {
@@ -376,14 +431,70 @@
             if (s.type === 'refs') s.items.push({ name: '', relation: '', company: '', contact: '' });
             else if (s.type === 'edu') s.items.push({ degree: '', school: '', year: '', loc: '' });
             else s.items.push({ role: '', org: '', year: '', loc: '', desc: '' });
-            renderEditor(); saveState(); updatePreview();
+            renderEditor(); saveToDB(); updatePreview();
         }
 
         function removeSection(id) {
             if (confirm("Permanently delete this section?")) {
                 state.sections = state.sections.filter(s => s.id !== id);
-                renderEditor(); updatePreview(); saveState();
+                renderEditor(); updatePreview(); saveToDB();
             }
+        }
+
+        function handlePhoto(input) {
+            if (input.files?.[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    state.photo = e.target.result;
+                    state.photoPos = { x: 50, y: 50 };
+                    document.getElementById('profile-img').src = state.photo;
+                    document.getElementById('profile-img').classList.remove('hidden');
+                    saveToDB(); updatePreview();
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function removePhoto() {
+            state.photo = ''; 
+            document.getElementById('profile-img').classList.add('hidden');
+            document.getElementById('photo-upload').value = '';
+            saveToDB(); updatePreview();
+        }
+
+        function startPhotoDrag(e) {
+            isDraggingPhoto = true;
+            startX = (e.type.includes('touch') ? e.touches[0].clientX : e.clientX);
+            startY = (e.type.includes('touch') ? e.touches[0].clientY : e.clientY);
+            document.addEventListener('mousemove', handlePhotoDrag);
+            document.addEventListener('mouseup', endPhotoDrag);
+            document.addEventListener('touchmove', handlePhotoDrag);
+            document.addEventListener('touchend', endPhotoDrag);
+            e.preventDefault();
+        }
+
+        function handlePhotoDrag(e) {
+            if (!isDraggingPhoto) return;
+            const curX = (e.type.includes('touch') ? e.touches[0].clientX : e.clientX);
+            const curY = (e.type.includes('touch') ? e.touches[0].clientY : e.clientY);
+            const dx = (curX - startX) * 0.45;
+            const dy = (curY - startY) * 0.45;
+            state.photoPos.x = Math.max(-10, Math.min(110, state.photoPos.x + dx));
+            state.photoPos.y = Math.max(-10, Math.min(110, state.photoPos.y + dy));
+            startX = curX; startY = curY;
+            const img = document.getElementById('preview-photo-img');
+            if (img) {
+                img.style.left = `${state.photoPos.x}%`;
+                img.style.top = `${state.photoPos.y}%`;
+                img.style.transform = `translate(-${state.photoPos.x}%, -${state.photoPos.y}%)`;
+            }
+        }
+
+        function endPhotoDrag() {
+            isDraggingPhoto = false;
+            document.removeEventListener('mousemove', handlePhotoDrag);
+            document.removeEventListener('mouseup', endPhotoDrag);
+            saveToDB(); updatePreview();
         }
 
         function renderEditor() {
@@ -410,8 +521,7 @@
                                         <input type="text" placeholder="Title/Relation" value="${item.relation || ''}" oninput="updateItem('${s.id}', ${idx}, 'relation', this.value)" class="p-2 text-[10px] rounded border bg-white outline-none">
                                         <input type="text" placeholder="Company" value="${item.company || ''}" oninput="updateItem('${s.id}', ${idx}, 'company', this.value)" class="p-2 text-[10px] rounded border bg-white outline-none">
                                         <input type="text" placeholder="Email/Phone" value="${item.contact || ''}" oninput="updateItem('${s.id}', ${idx}, 'contact', this.value)" class="p-2 text-[10px] rounded border bg-white outline-none">
-                                    </div>
-                                `;
+                                    </div>`;
                                 if (s.type === 'edu') return `
                                     <div class="p-4 bg-slate-50 rounded-xl space-y-2">
                                         <div class="grid grid-cols-2 gap-2">
@@ -420,8 +530,7 @@
                                         </div>
                                         <input type="text" placeholder="School/University" value="${item.school || ''}" oninput="updateItem('${s.id}', ${idx}, 'school', this.value)" class="w-full p-2 text-[10px] rounded border bg-white outline-none">
                                         <input type="text" placeholder="Address (Optional)" value="${item.loc || ''}" oninput="updateItem('${s.id}', ${idx}, 'loc', this.value)" class="w-full p-2 text-[10px] rounded border bg-white outline-none">
-                                    </div>
-                                `;
+                                    </div>`;
                                 return `
                                     <div class="p-4 bg-slate-50 rounded-xl space-y-2">
                                         <div class="grid grid-cols-2 gap-2">
@@ -433,53 +542,13 @@
                                             <input type="text" placeholder="Location (Optional)" value="${item.loc || ''}" oninput="updateItem('${s.id}', ${idx}, 'loc', this.value)" class="p-2 text-[10px] rounded border bg-white outline-none">
                                         </div>
                                         <textarea placeholder="List key achievements..." oninput="updateItem('${s.id}', ${idx}, 'desc', this.value)" class="w-full p-2 text-[10px] rounded border h-16 bg-white outline-none">${item.desc || ''}</textarea>
-                                    </div>
-                                `;
+                                    </div>`;
                             }).join('')}
                             <button onclick="addItem('${s.id}')" class="w-full py-3 border-2 border-dashed border-slate-100 text-slate-400 rounded-xl text-[9px] font-black uppercase hover:bg-slate-50 transition-all">+ Add New Entry</button>
                         </div>
                     `}
                 </div>
             `).join('');
-        }
-
-        function startPhotoDrag(e) {
-            isDraggingPhoto = true;
-            startX = (e.type.includes('touch') ? e.touches[0].clientX : e.clientX);
-            startY = (e.type.includes('touch') ? e.touches[0].clientY : e.clientY);
-            document.addEventListener('mousemove', handlePhotoDrag);
-            document.addEventListener('mouseup', endPhotoDrag);
-            document.addEventListener('touchmove', handlePhotoDrag);
-            document.addEventListener('touchend', endPhotoDrag);
-            e.preventDefault();
-        }
-
-        function handlePhotoDrag(e) {
-            if (!isDraggingPhoto) return;
-            const curX = (e.type.includes('touch') ? e.touches[0].clientX : e.clientX);
-            const curY = (e.type.includes('touch') ? e.touches[0].clientY : e.clientY);
-            const dx = (curX - startX) * 0.45;
-            const dy = (curY - startY) * 0.45;
-            state.photoPos.x = Math.max(-10, Math.min(110, state.photoPos.x + dx));
-            state.photoPos.y = Math.max(-10, Math.min(110, state.photoPos.y + dy));
-            startX = curX;
-            startY = curY;
-            const img = document.getElementById('preview-photo-img');
-            if (img) {
-                img.style.left = `${state.photoPos.x}%`;
-                img.style.top = `${state.photoPos.y}%`;
-                img.style.transform = `translate(-${state.photoPos.x}%, -${state.photoPos.y}%)`;
-            }
-        }
-
-        function endPhotoDrag() {
-            isDraggingPhoto = false;
-            state.photoPos.x = Math.max(0, Math.min(100, state.photoPos.x));
-            state.photoPos.y = Math.max(0, Math.min(100, state.photoPos.y));
-            document.removeEventListener('mousemove', handlePhotoDrag);
-            document.removeEventListener('mouseup', endPhotoDrag);
-            saveState();
-            updatePreview();
         }
 
         function updatePreview() {
@@ -492,7 +561,6 @@
             document.documentElement.style.setProperty('--theme-color', state.theme);
             
             const canvas = document.getElementById('resume-canvas');
-            
             let headerHtml = `
                 <header class="flex ${state.styleIndex === 3 ? 'flex-col items-center text-center' : 'justify-between items-start'} gap-8 mb-10">
                     <div class="flex-1">
@@ -508,52 +576,24 @@
                         </div>
                         <div class="hidden print:block print-photo w-[35mm] h-[35mm] rounded-[10mm] border-4 border-white overflow-hidden relative">
                              <img src="${state.photo}" style="position: absolute; left: ${state.photoPos.x}%; top: ${state.photoPos.y}%; transform: translate(-${state.photoPos.x}%, -${state.photoPos.y}%); height: 110%; width: auto; max-width: none;">
-                        </div>
-                    ` : ''}
+                        </div>` : ''}
                 </header>
-                <div class="space-y-2">
-            `;
+                <div class="space-y-2">`;
 
             let sectionsHtml = '';
             state.sections.forEach(s => {
                 let contentHtml = '';
-                if (s.type === 'text') {
-                    contentHtml = `<p class="text-[11px] leading-relaxed text-slate-600 whitespace-pre-wrap">${s.content || ''}</p>`;
-                } else if (s.type === 'tags') {
-                    contentHtml = `<div class="flex flex-wrap gap-2">${(s.content || '').split(',').map(t => t.trim() ? `<span class="px-2.5 py-1.5 bg-slate-50 border border-slate-100 rounded-lg text-[9px] font-bold uppercase text-slate-600">${t.trim()}</span>` : '').join('')}</div>`;
-                } else if (s.type === 'refs') {
-                    contentHtml = `<div class="grid grid-cols-2 gap-6">${s.items.map(i => `
-                        <div>
-                            <p class="text-[11px] font-bold text-slate-900 mb-0.5">${i.name || 'Name'}</p>
-                            <p class="text-[9px] font-black uppercase" style="color: ${state.theme}">${i.relation || ''} ${i.company ? `• ${i.company}` : ''}</p>
-                            <p class="text-[10px] text-slate-500 mt-1 italic">${i.contact || ''}</p>
-                        </div>
-                    `).join('')}</div>`;
-                } else if (s.type === 'edu') {
-                    contentHtml = s.items.map(i => `
-                        <div class="mb-4">
-                            <div class="flex justify-between font-bold text-slate-900 text-[12px]">
-                                <span>${i.degree || 'Degree'}</span><span class="text-[10px] text-slate-300 font-normal">${i.year || ''}</span>
-                            </div>
-                            <div class="text-[10px] font-black uppercase tracking-widest" style="color: ${state.theme}">${i.school || 'Institution'} ${i.loc ? `• ${i.loc}` : ''}</div>
-                        </div>
-                    `).join('');
-                } else if (s.type === 'list') {
-                    contentHtml = s.items.map(i => `
-                        <div class="mb-5">
-                            <div class="flex justify-between font-bold text-slate-900 text-[12px]">
-                                <span>${i.role || 'Role'}</span><span class="text-[10px] text-slate-300 font-normal">${i.year || ''}</span>
-                            </div>
-                            <div class="text-[10px] font-black uppercase tracking-widest mb-1.5" style="color: ${state.theme}">${i.org || 'Company'} ${i.loc ? `• ${i.loc}` : ''}</div>
-                            <p class="text-[10.5px] text-slate-500 leading-relaxed">${i.desc || ''}</p>
-                        </div>
-                    `).join('');
-                }
+                if (s.type === 'text') contentHtml = `<p class="text-[11px] leading-relaxed text-slate-600 whitespace-pre-wrap">${s.content || ''}</p>`;
+                else if (s.type === 'tags') contentHtml = `<div class="flex flex-wrap gap-2">${(s.content || '').split(',').map(t => t.trim() ? `<span class="px-2.5 py-1.5 bg-slate-50 border border-slate-100 rounded-lg text-[9px] font-bold uppercase text-slate-600">${t.trim()}</span>` : '').join('')}</div>`;
+                else if (s.type === 'refs') contentHtml = `<div class="grid grid-cols-2 gap-6">${s.items.map(i => `<div><p class="text-[11px] font-bold text-slate-900 mb-0.5">${i.name || 'Name'}</p><p class="text-[9px] font-black uppercase" style="color: ${state.theme}">${i.relation || ''} ${i.company ? `• ${i.company}` : ''}</p><p class="text-[10px] text-slate-500 mt-1 italic">${i.contact || ''}</p></div>`).join('')}</div>`;
+                else if (s.type === 'edu') contentHtml = s.items.map(i => `<div class="mb-4"><div class="flex justify-between font-bold text-slate-900 text-[12px]"><span>${i.degree || 'Degree'}</span><span class="text-[10px] text-slate-300 font-normal">${i.year || ''}</span></div><div class="text-[10px] font-black uppercase tracking-widest" style="color: ${state.theme}">${i.school || 'Institution'} ${i.loc ? `• ${i.loc}` : ''}</div></div>`).join('');
+                else if (s.type === 'list') contentHtml = s.items.map(i => `<div class="mb-5"><div class="flex justify-between font-bold text-slate-900 text-[12px]"><span>${i.role || 'Role'}</span><span class="text-[10px] text-slate-300 font-normal">${i.year || ''}</span></div><div class="text-[10px] font-black uppercase tracking-widest mb-1.5" style="color: ${state.theme}">${i.org || 'Company'} ${i.loc ? `• ${i.loc}` : ''}</div><p class="text-[10.5px] text-slate-500 leading-relaxed">${i.desc || ''}</p></div>`).join('');
+                
                 if (contentHtml) sectionsHtml += `<section><div class="section-title">${s.title}</div>${contentHtml}</section>`;
             });
 
             canvas.innerHTML = headerHtml + sectionsHtml + `</div>`;
-            saveState();
+            saveToDB(); scalePreview();
         }
 
         function scalePreview() {
@@ -565,14 +605,15 @@
         }
 
         function resetData() {
-            if(confirm("This will erase all content and start fresh. Continue?")) { 
-                localStorage.removeItem('pro_resume_v3.9'); 
-                location.reload(); 
+            if(confirm("Clear current version content?")) { 
+                state.sections = []; renderEditor(); updatePreview(); saveToDB();
             }
         }
 
         function showPrintModal() { document.getElementById('printModal').classList.add('active'); }
         function closeModal() { document.getElementById('printModal').classList.remove('active'); }
+
+        startApp();
     </script>
 </body>
 </html>
