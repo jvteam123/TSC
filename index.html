@@ -237,15 +237,7 @@
         const tips = [
             "Developer: Lorens Christopher Ebrado, Made for Free with ❤️",
             "HINT: Keep your summary under 3 sentences for maximum impact.",
-            "EXP: Use Action Verbs like 'Spearheaded' or 'Optimized' in your work history.",
-            "EXP: Quantify! 'Improved speed by 40%' is better than 'Worked on speed'.",
-            "SKILLS: Separate skills with commas (e.g. Figma, React, Python) to create tags.",
             "PHOTO: Drag your photo in the preview to center your face perfectly!",
-            "EDU: Listing your GPA is optional; focus on honors or relevant coursework.",
-            "REFS: List specific mentors or managers who can vouch for your work ethic.",
-            "STYLE: Preset 4 (JetBrains Mono) is perfect for technical and engineering roles.",
-            "LAYOUT: Place your strongest section (Experience or Skills) at the top.",
-            "WORK: The Address field is optional; leave it blank for a cleaner look.",
             "PRINT: Always check the 'Background Graphics' box in your print settings!",
             "SUMMARY: Avoid generic terms like 'hardworking'—use specific achievements."
         ];
@@ -267,6 +259,22 @@
         let isDraggingPhoto = false;
         let startX, startY;
 
+        const DEFAULT_TEMPLATE = {
+            name: 'Your Name',
+            title: 'Lead Designer',
+            email: 'hello@renzku.com',
+            phone: '+63 900 000 0000',
+            location: 'Cebu, Philippines',
+            theme: '#6366f1',
+            styleIndex: 1,
+            photo: '',
+            photoPos: { x: 50, y: 50 },
+            sections: [
+                { id: 's1', title: 'Summary', type: 'text', content: 'Strategic professional with a strong track record of success.' },
+                { id: 's2', title: 'Work Experience', type: 'list', items: [{ role: 'Senior Designer', org: 'Creative Studio', year: '2022 - 2026', loc: 'Cebu City', desc: 'Managed high-stakes branding projects.' }] }
+            ]
+        };
+
         async function initDB() {
             return new Promise((resolve) => {
                 const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -283,7 +291,8 @@
             return new Promise((resolve) => {
                 const tx = db.transaction(STORE_NAME, 'readwrite');
                 const store = tx.objectStore(STORE_NAME);
-                const req = store.put({ ...state, id: activeId });
+                state.id = activeId; 
+                const req = store.put(state);
                 req.onsuccess = () => {
                     const ind = document.getElementById('save-indicator');
                     if (ind) {
@@ -301,30 +310,13 @@
             const all = await new Promise(r => tx.objectStore(STORE_NAME).getAll().onsuccess = (e) => r(e.target.result));
 
             if (all.length === 0) {
-                activeId = 'res-' + Date.now();
-                state = { 
-                    label: 'Main Resume',
-                    name: 'Your Name',
-                    title: 'Lead Designer',
-                    email: 'hello@renzku.com',
-                    phone: '+63 900 000 0000',
-                    location: 'Cebu, Philippines',
-                    theme: '#6366f1',
-                    styleIndex: 1,
-                    photo: '',
-                    photoPos: { x: 50, y: 50 },
-                    sections: [
-                        { id: 's1', title: 'Summary', type: 'text', content: 'Strategic professional with a strong track record of success.' },
-                        { id: 's2', title: 'Work Experience', type: 'list', items: [{ role: 'Senior Designer', org: 'Creative Studio', year: '2022 - 2026', loc: 'Cebu City', desc: 'Managed high-stakes branding projects.' }] }
-                    ]
-                };
+                activeId = 'res-main'; 
+                state = { id: activeId, label: 'Main Resume', ...DEFAULT_TEMPLATE };
                 await saveToDB();
                 localStorage.setItem('active_resume_id', activeId);
             } else {
-                // FIXED: Prioritize the ID stored in localStorage, otherwise pick the first one
                 const savedId = localStorage.getItem('active_resume_id');
                 const found = all.find(r => r.id === savedId);
-                
                 if (found) {
                     activeId = savedId;
                     state = found;
@@ -343,43 +335,42 @@
             window.addEventListener('resize', scalePreview);
         }
 
+        // FIXED LOGIC: Save current edits to New Profile AND Reset Main
         async function createNewResume() {
-            const label = prompt("Enter a name for this profile (e.g. Test Resume):");
+            const label = prompt("Enter a name for this profile (e.g. Test 1):");
             if (!label) return;
             
-            // Save current work before creating new
-            await saveToDB();
-
+            // 1. Capture current edits into a new object
             const newId = 'res-' + Date.now();
-            activeId = newId;
-            
-            state = { 
-                label, 
-                name: '', 
-                title: '', 
-                email: '', 
-                phone: '', 
-                location: '', 
-                theme: '#6366f1', 
-                styleIndex: 1, 
-                photo: '', 
-                photoPos: { x: 50, y: 50 }, 
-                sections: [
-                    { id: 's1', title: 'Summary', type: 'text', content: '' }
-                ] 
+            const newProfileData = { 
+                ...state,      // Copy everything currently on screen
+                id: newId,     // Give it a new unique ID
+                label: label   // Give it the name the user typed
             };
             
-            // Wait for the new profile to hit the database
-            await saveToDB();
-            localStorage.setItem('active_resume_id', newId);
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
             
-            // Force reload to refresh UI with the new ID
+            // 2. Save the "Test 1" profile with the current data
+            await new Promise(r => store.add(newProfileData).onsuccess = r);
+
+            // 3. Reset the "Main Resume" back to default if we are currently on Main
+            if (activeId === 'res-main') {
+                const resetMain = { 
+                    id: 'res-main', 
+                    label: 'Main Resume', 
+                    ...DEFAULT_TEMPLATE 
+                };
+                await new Promise(r => store.put(resetMain).onsuccess = r);
+            }
+
+            // 4. Switch to the newly created profile and refresh
+            localStorage.setItem('active_resume_id', newId);
             window.location.reload(); 
         }
 
         async function switchResume(id) {
             if (id === activeId) return;
-            await saveToDB();
             localStorage.setItem('active_resume_id', id);
             window.location.reload(); 
         }
@@ -387,9 +378,9 @@
         async function deleteCurrentResume() {
             const tx = db.transaction(STORE_NAME, 'readonly');
             const all = await new Promise(r => tx.objectStore(STORE_NAME).getAll().onsuccess = (e) => r(e.target.result));
-            if (all.length <= 1) return alert("Keep at least one resume.");
+            if (all.length <= 1) return alert("Keep at least one profile.");
             
-            if (confirm(`Delete profile "${state.label}" permanently?`)) {
+            if (confirm(`Delete profile "${state.label}"?`)) {
                 const delTx = db.transaction(STORE_NAME, 'readwrite');
                 delTx.objectStore(STORE_NAME).delete(activeId);
                 localStorage.removeItem('active_resume_id');
@@ -409,16 +400,12 @@
             document.getElementById('in-phone').value = state.phone || '';
             document.getElementById('in-location').value = state.location || '';
             document.getElementById('theme-color').value = state.theme || '#6366f1';
-            
             updateStyleButtons();
-            
             const pImg = document.getElementById('profile-img');
             if (state.photo) {
                 pImg.src = state.photo;
                 pImg.classList.remove('hidden');
-            } else {
-                pImg.classList.add('hidden');
-            }
+            } else { pImg.classList.add('hidden'); }
         }
 
         function initSortable() {
@@ -430,17 +417,14 @@
                 onEnd: () => {
                     const ids = Array.from(document.getElementById('dynamic-sections').children).map(c => c.dataset.id);
                     state.sections = ids.map(id => state.sections.find(s => s.id === id));
-                    saveToDB(); 
-                    updatePreview();
+                    saveToDB(); updatePreview();
                 }
             });
         }
 
         function changeStyle(i) {
             state.styleIndex = i;
-            updateStyleButtons(); 
-            updatePreview(); 
-            saveToDB();
+            updateStyleButtons(); updatePreview(); saveToDB();
         }
 
         function updateStyleButtons() {
@@ -452,10 +436,7 @@
 
         function checkAndAdd(title, type) {
             const exists = state.sections.some(s => s.title.toLowerCase() === title.toLowerCase());
-            if (exists) {
-                const confirmAdd = confirm(`The "${title}" section is already added. Add another?`);
-                if (!confirmAdd) return;
-            }
+            if (exists && !confirm(`Add another "${title}" section?`)) return;
             addSection(title, type);
         }
 
@@ -490,16 +471,14 @@
 
         function removeItem(sid, idx) {
             const s = state.sections.find(sec => sec.id === sid);
-            if (s) {
-                if (confirm("Remove this entry permanently?")) {
-                    s.items.splice(idx, 1);
-                    renderEditor(); updatePreview(); saveToDB();
-                }
+            if (s && confirm("Remove this entry?")) {
+                s.items.splice(idx, 1);
+                renderEditor(); updatePreview(); saveToDB();
             }
         }
 
         function removeSection(id) {
-            if (confirm("Permanently delete this section?")) {
+            if (confirm("Delete this section?")) {
                 state.sections = state.sections.filter(s => s.id !== id);
                 renderEditor(); updatePreview(); saveToDB();
             }
@@ -522,7 +501,6 @@
         function removePhoto() {
             state.photo = ''; 
             document.getElementById('profile-img').classList.add('hidden');
-            document.getElementById('photo-upload').value = '';
             saveToDB(); updatePreview();
         }
 
@@ -581,45 +559,12 @@
                         <div class="space-y-4">
                             ${s.items.map((item, idx) => {
                                 let itemInputs = '';
-                                if (s.type === 'refs') itemInputs = `
-                                    <div class="grid grid-cols-2 gap-2 p-3 bg-slate-50 rounded-xl">
-                                        <input type="text" placeholder="Contact Person" value="${item.name || ''}" oninput="updateItem('${s.id}', ${idx}, 'name', this.value)" class="p-2 text-[10px] rounded border bg-white outline-none">
-                                        <input type="text" placeholder="Title/Relation" value="${item.relation || ''}" oninput="updateItem('${s.id}', ${idx}, 'relation', this.value)" class="p-2 text-[10px] rounded border bg-white outline-none">
-                                        <input type="text" placeholder="Company" value="${item.company || ''}" oninput="updateItem('${s.id}', ${idx}, 'company', this.value)" class="p-2 text-[10px] rounded border bg-white outline-none">
-                                        <input type="text" placeholder="Email/Phone" value="${item.contact || ''}" oninput="updateItem('${s.id}', ${idx}, 'contact', this.value)" class="p-2 text-[10px] rounded border bg-white outline-none">
-                                    </div>`;
-                                else if (s.type === 'edu') itemInputs = `
-                                    <div class="p-4 bg-slate-50 rounded-xl space-y-2">
-                                        <div class="grid grid-cols-2 gap-2">
-                                            <input type="text" placeholder="Degree / Course" value="${item.degree || ''}" oninput="updateItem('${s.id}', ${idx}, 'degree', this.value)" class="p-2 text-[10px] rounded border bg-white outline-none">
-                                            <input type="text" placeholder="Year Graduated" value="${item.year || ''}" oninput="updateItem('${s.id}', ${idx}, 'year', this.value)" class="p-2 text-[10px] rounded border bg-white outline-none">
-                                        </div>
-                                        <input type="text" placeholder="School/University" value="${item.school || ''}" oninput="updateItem('${s.id}', ${idx}, 'school', this.value)" class="w-full p-2 text-[10px] rounded border bg-white outline-none">
-                                        <input type="text" placeholder="Address (Optional)" value="${item.loc || ''}" oninput="updateItem('${s.id}', ${idx}, 'loc', this.value)" class="w-full p-2 text-[10px] rounded border bg-white outline-none">
-                                    </div>`;
-                                else itemInputs = `
-                                    <div class="p-4 bg-slate-50 rounded-xl space-y-2">
-                                        <div class="grid grid-cols-2 gap-2">
-                                            <input type="text" placeholder="Job Role" value="${item.role || ''}" oninput="updateItem('${s.id}', ${idx}, 'role', this.value)" class="p-2 text-[10px] rounded border bg-white outline-none">
-                                            <input type="text" placeholder="Timeline (e.g. 2018-2022)" value="${item.year || ''}" oninput="updateItem('${s.id}', ${idx}, 'year', this.value)" class="p-2 text-[10px] rounded border bg-white outline-none">
-                                        </div>
-                                        <div class="grid grid-cols-2 gap-2">
-                                            <input type="text" placeholder="Company Name" value="${item.org || ''}" oninput="updateItem('${s.id}', ${idx}, 'org', this.value)" class="p-2 text-[10px] rounded border bg-white outline-none">
-                                            <input type="text" placeholder="Location (Optional)" value="${item.loc || ''}" oninput="updateItem('${s.id}', ${idx}, 'loc', this.value)" class="p-2 text-[10px] rounded border bg-white outline-none">
-                                        </div>
-                                        <textarea placeholder="List key achievements..." oninput="updateItem('${s.id}', ${idx}, 'desc', this.value)" class="w-full p-2 text-[10px] rounded border h-16 bg-white outline-none">${item.desc || ''}</textarea>
-                                    </div>`;
-
-                                return `
-                                    <div class="relative group/item">
-                                        ${itemInputs}
-                                        <button onclick="removeItem('${s.id}', ${idx})" class="mt-2 text-[8px] font-black text-red-400 uppercase tracking-widest hover:text-red-600 flex items-center gap-1">
-                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                            Remove Entry
-                                        </button>
-                                    </div>`;
+                                if (s.type === 'refs') itemInputs = `<div class="grid grid-cols-2 gap-2 p-3 bg-slate-50 rounded-xl"><input type="text" placeholder="Name" value="${item.name || ''}" oninput="updateItem('${s.id}', ${idx}, 'name', this.value)" class="p-2 text-[10px] rounded border"><input type="text" placeholder="Title" value="${item.relation || ''}" oninput="updateItem('${s.id}', ${idx}, 'relation', this.value)" class="p-2 text-[10px] rounded border"><input type="text" placeholder="Company" value="${item.company || ''}" oninput="updateItem('${s.id}', ${idx}, 'company', this.value)" class="p-2 text-[10px] rounded border"><input type="text" placeholder="Contact" value="${item.contact || ''}" oninput="updateItem('${s.id}', ${idx}, 'contact', this.value)" class="p-2 text-[10px] rounded border"></div>`;
+                                else if (s.type === 'edu') itemInputs = `<div class="p-4 bg-slate-50 rounded-xl space-y-2"><div class="grid grid-cols-2 gap-2"><input type="text" placeholder="Degree" value="${item.degree || ''}" oninput="updateItem('${s.id}', ${idx}, 'degree', this.value)" class="p-2 text-[10px] rounded border"><input type="text" placeholder="Year" value="${item.year || ''}" oninput="updateItem('${s.id}', ${idx}, 'year', this.value)" class="p-2 text-[10px] rounded border"></div><input type="text" placeholder="School" value="${item.school || ''}" oninput="updateItem('${s.id}', ${idx}, 'school', this.value)" class="w-full p-2 text-[10px] rounded border"></div>`;
+                                else itemInputs = `<div class="p-4 bg-slate-50 rounded-xl space-y-2"><div class="grid grid-cols-2 gap-2"><input type="text" placeholder="Role" value="${item.role || ''}" oninput="updateItem('${s.id}', ${idx}, 'role', this.value)" class="p-2 text-[10px] rounded border"><input type="text" placeholder="Year" value="${item.year || ''}" oninput="updateItem('${s.id}', ${idx}, 'year', this.value)" class="p-2 text-[10px] rounded border"></div><input type="text" placeholder="Org" value="${item.org || ''}" oninput="updateItem('${s.id}', ${idx}, 'org', this.value)" class="w-full p-2 text-[10px] rounded border"><textarea placeholder="Desc" oninput="updateItem('${s.id}', ${idx}, 'desc', this.value)" class="w-full p-2 text-[10px] rounded border h-16">${item.desc || ''}</textarea></div>`;
+                                return `<div class="relative group/item">${itemInputs}<button onclick="removeItem('${s.id}', ${idx})" class="mt-2 text-[8px] font-black text-red-400 uppercase tracking-widest hover:text-red-600 flex items-center gap-1"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>Remove Entry</button></div>`;
                             }).join('')}
-                            <button onclick="addItem('${s.id}')" class="w-full py-3 border-2 border-dashed border-slate-100 text-slate-400 rounded-xl text-[9px] font-black uppercase hover:bg-slate-50 transition-all">+ Add New Entry</button>
+                            <button onclick="addItem('${s.id}')" class="w-full py-3 border-2 border-dashed border-slate-100 text-slate-400 rounded-xl text-[9px] font-black uppercase hover:bg-slate-50">+ Add New Entry</button>
                         </div>
                     `}
                 </div>
@@ -634,44 +579,21 @@
             state.location = document.getElementById('in-location').value;
             state.theme = document.getElementById('theme-color').value;
             document.documentElement.style.setProperty('--theme-color', state.theme);
-            
             const canvas = document.getElementById('resume-canvas');
             if(!canvas) return;
-
-            let headerHtml = `
-                <header class="flex ${state.styleIndex === 3 ? 'flex-col items-center text-center' : 'justify-between items-start'} gap-8 mb-10">
-                    <div class="flex-1">
-                        <h1 class="text-6xl font-black tracking-tighter leading-[0.85] mb-4 text-slate-900 uppercase">${state.name || ""}</h1>
-                        <p class="text-xl font-bold tracking-[0.3em] uppercase" style="color: ${state.theme}">${state.title || ""}</p>
-                        <div class="flex flex-wrap ${state.styleIndex === 3 ? 'justify-center' : ''} gap-x-6 gap-y-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mt-8">
-                            <span>${state.email}</span> <span>${state.email && state.phone ? '•' : ''}</span> <span>${state.phone}</span> <span>${state.phone && state.location ? '•' : ''}</span> <span>${state.location}</span>
-                        </div>
-                    </div>
-                    ${state.photo ? `
-                        <div class="photo-container rounded-[2rem] shadow-xl border-4 border-white no-print" onmousedown="startPhotoDrag(event)" ontouchstart="startPhotoDrag(event)">
-                            <img id="preview-photo-img" src="${state.photo}" style="left: ${state.photoPos.x}%; top: ${state.photoPos.y}%; transform: translate(-${state.photoPos.x}%, -${state.photoPos.y}%); height: 110%; width: auto;">
-                        </div>
-                        <div class="hidden print:block print-photo w-[35mm] h-[35mm] rounded-[10mm] border-4 border-white overflow-hidden relative">
-                             <img src="${state.photo}" style="position: absolute; left: ${state.photoPos.x}%; top: ${state.photoPos.y}%; transform: translate(-${state.photoPos.x}%, -${state.photoPos.y}%); height: 110%; width: auto; max-width: none;">
-                        </div>` : ''}
-                </header>
-                <div class="space-y-2">`;
-
+            let headerHtml = `<header class="flex ${state.styleIndex === 3 ? 'flex-col items-center text-center' : 'justify-between items-start'} gap-8 mb-10"><div class="flex-1"><h1 class="text-6xl font-black tracking-tighter leading-[0.85] mb-4 text-slate-900 uppercase">${state.name || ""}</h1><p class="text-xl font-bold tracking-[0.3em] uppercase" style="color: ${state.theme}">${state.title || ""}</p><div class="flex flex-wrap ${state.styleIndex === 3 ? 'justify-center' : ''} gap-x-6 gap-y-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mt-8"><span>${state.email}</span> <span>•</span> <span>${state.phone}</span> <span>•</span> <span>${state.location}</span></div></div>${state.photo ? `<div class="photo-container rounded-[2rem] shadow-xl border-4 border-white no-print" onmousedown="startPhotoDrag(event)" ontouchstart="startPhotoDrag(event)"><img id="preview-photo-img" src="${state.photo}" style="left: ${state.photoPos.x}%; top: ${state.photoPos.y}%; transform: translate(-${state.photoPos.x}%, -${state.photoPos.y}%); height: 110%; width: auto;"></div><div class="hidden print:block print-photo w-[35mm] h-[35mm] rounded-[10mm] border-4 border-white overflow-hidden relative"><img src="${state.photo}" style="position: absolute; left: ${state.photoPos.x}%; top: ${state.photoPos.y}%; transform: translate(-${state.photoPos.x}%, -${state.photoPos.y}%); height: 110%; width: auto; max-width: none;"></div>` : ''}</header><div class="space-y-2">`;
             let sectionsHtml = '';
             state.sections.forEach(s => {
                 let contentHtml = '';
                 if (s.type === 'text') contentHtml = `<p class="text-[11px] leading-relaxed text-slate-600 whitespace-pre-wrap">${s.content || ''}</p>`;
                 else if (s.type === 'tags') contentHtml = `<div class="flex flex-wrap gap-2">${(s.content || '').split(',').map(t => t.trim() ? `<span class="px-2.5 py-1.5 bg-slate-50 border border-slate-100 rounded-lg text-[9px] font-bold uppercase text-slate-600">${t.trim()}</span>` : '').join('')}</div>`;
-                else if (s.type === 'refs') contentHtml = `<div class="grid grid-cols-2 gap-6">${s.items.map(i => `<div><p class="text-[11px] font-bold text-slate-900 mb-0.5">${i.name || ''}</p><p class="text-[9px] font-black uppercase" style="color: ${state.theme}">${i.relation || ''} ${i.company ? `• ${i.company}` : ''}</p><p class="text-[10px] text-slate-500 mt-1 italic">${i.contact || ''}</p></div>`).join('')}</div>`;
-                else if (s.type === 'edu') contentHtml = s.items.map(i => `<div class="mb-4"><div class="flex justify-between font-bold text-slate-900 text-[12px]"><span>${i.degree || ''}</span><span class="text-[10px] text-slate-300 font-normal">${i.year || ''}</span></div><div class="text-[10px] font-black uppercase tracking-widest" style="color: ${state.theme}">${i.school || ''} ${i.loc ? `• ${i.loc}` : ''}</div></div>`).join('');
-                else if (s.type === 'list') contentHtml = s.items.map(i => `<div class="mb-5"><div class="flex justify-between font-bold text-slate-900 text-[12px]"><span>${i.role || ''}</span><span class="text-[10px] text-slate-300 font-normal">${i.year || ''}</span></div><div class="text-[10px] font-black uppercase tracking-widest mb-1.5" style="color: ${state.theme}">${i.org || ''} ${i.loc ? `• ${i.loc}` : ''}</div><p class="text-[10.5px] text-slate-500 leading-relaxed">${i.desc || ''}</p></div>`).join('');
-                
+                else if (s.type === 'refs') contentHtml = `<div class="grid grid-cols-2 gap-6">${s.items.map(i => `<div><p class="text-[11px] font-bold text-slate-900 mb-0.5">${i.name || ''}</p><p class="text-[9px] font-black uppercase" style="color: ${state.theme}">${i.relation || ''}</p><p class="text-[10px] text-slate-500 mt-1 italic">${i.contact || ''}</p></div>`).join('')}</div>`;
+                else if (s.type === 'edu') contentHtml = s.items.map(i => `<div class="mb-4"><div class="flex justify-between font-bold text-slate-900 text-[12px]"><span>${i.degree || ''}</span><span class="text-[10px] text-slate-300 font-normal">${i.year || ''}</span></div><div class="text-[10px] font-black uppercase tracking-widest" style="color: ${state.theme}">${i.school || ''}</div></div>`).join('');
+                else if (s.type === 'list') contentHtml = s.items.map(i => `<div class="mb-5"><div class="flex justify-between font-bold text-slate-900 text-[12px]"><span>${i.role || ''}</span><span class="text-[10px] text-slate-300 font-normal">${i.year || ''}</span></div><div class="text-[10px] font-black uppercase tracking-widest mb-1.5" style="color: ${state.theme}">${i.org || ''}</div><p class="text-[10.5px] text-slate-500 leading-relaxed">${i.desc || ''}</p></div>`).join('');
                 if (contentHtml) sectionsHtml += `<section><div class="section-title">${s.title}</div>${contentHtml}</section>`;
             });
-
             canvas.innerHTML = headerHtml + sectionsHtml + `</div>`;
-            saveToDB(); 
-            scalePreview();
+            saveToDB(); scalePreview();
         }
 
         function scalePreview() {
