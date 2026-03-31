@@ -29,6 +29,16 @@
             grid-template-columns: 1fr 80px;
         }
 
+        .shift-badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .shift-day { background-color: #fef3c7; color: #92400e; }
+        .shift-night { background-color: #e0e7ff; color: #3730a3; }
+
         .sub-header {
             background-color: #4b5563;
             color: white;
@@ -49,15 +59,15 @@
             background-color: #fafafa;
         }
 
-        .id-cell {
-            border-left: 1px solid #e5e7eb;
-            text-align: center;
-        }
-
         .quality-cell {
             border-left: 1px solid #e5e7eb;
             text-align: center;
             font-weight: 600;
+        }
+
+        .id-cell {
+            border-left: 1px solid #e5e7eb;
+            text-align: center;
         }
 
         .team-footer {
@@ -84,34 +94,53 @@
 
     <div class="max-w-7xl mx-auto">
         <!-- Header Actions -->
-        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+        <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 gap-6 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
             <div>
                 <h1 class="text-2xl font-bold text-gray-800">Tech Operations Shuffler</h1>
-                <p class="text-gray-500">Quality Balanced & Dynamic Team Sizes</p>
+                <p class="text-gray-500">Shift-Isolated Quality Balancing</p>
             </div>
-            <div class="flex flex-wrap gap-3">
+            
+            <div class="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+                <div class="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
+                    <button onclick="setShuffleScope('all')" id="scope-all" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors bg-white shadow-sm text-gray-900">All Shifts</button>
+                    <button onclick="setShuffleScope('day')" id="scope-day" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors text-gray-500 hover:text-gray-700">Day Only</button>
+                    <button onclick="setShuffleScope('night')" id="scope-night" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors text-gray-500 hover:text-gray-700">Night Only</button>
+                </div>
+
+                <div class="h-8 w-px bg-gray-200 mx-1 hidden md:block"></div>
+
                 <button onclick="openMemberModal()" class="btn bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>
                     Manage Techs
                 </button>
                 <button onclick="openTeamModal()" class="btn bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
                     Setup Teams
                 </button>
                 <button onclick="shuffleBalanced()" class="btn bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-orange-200">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v16Z"/><path d="M6 12h12"/><path d="M6 16h12"/><path d="M6 8h12"/></svg>
-                    SHUFFLE EVERYTHING
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                    SHUFFLE SELECTED
                 </button>
             </div>
         </div>
 
-        <!-- Teams Grid -->
-        <div id="teams-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Team cards will be injected here -->
+        <!-- Shift Groupings -->
+        <div id="day-section" class="mb-10">
+            <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-orange-600">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                Day Shift (Shift 1)
+            </h2>
+            <div id="teams-container-day" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </div>
+
+        <div id="night-section">
+            <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-indigo-600">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                Night Shift (Shift 2)
+            </h2>
+            <div id="teams-container-night" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
         </div>
     </div>
 
-    <!-- Modals -->
+    <!-- Tech Management Modal -->
     <div id="member-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl">
             <div class="p-6 border-b flex justify-between items-center">
@@ -135,12 +164,13 @@
                 <div id="member-list" class="space-y-2"></div>
             </div>
             <div class="p-4 border-t flex justify-between items-center">
-                <button onclick="resetToDefault()" class="text-red-500 text-sm font-medium hover:underline">Reset to Default List</button>
+                <button onclick="resetToDefault()" class="text-red-500 text-sm font-medium hover:underline">Reset to Default</button>
                 <button onclick="closeModals()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded font-medium">Close</button>
             </div>
         </div>
     </div>
 
+    <!-- Team Setup Modal -->
     <div id="team-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-xl w-full max-w-md shadow-2xl">
             <div class="p-6 border-b flex justify-between items-center">
@@ -148,9 +178,15 @@
                 <button onclick="closeModals()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
             </div>
             <div class="p-6">
-                <div class="flex gap-2 mb-4">
-                    <input type="text" id="team-name" placeholder="Team Name" class="flex-1 border p-2 rounded">
-                    <button onclick="addTeam()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-bold">+</button>
+                <div class="space-y-3 mb-6">
+                    <input type="text" id="team-name" placeholder="Team Name (e.g. 63 - Cherrie)" class="w-full border p-2 rounded">
+                    <div class="flex gap-2">
+                        <select id="team-shift" class="flex-1 border p-2 rounded text-sm bg-gray-50">
+                            <option value="day">Day Shift</option>
+                            <option value="night">Night Shift</option>
+                        </select>
+                        <button onclick="addTeam()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-bold">Add Team</button>
+                    </div>
                 </div>
                 <div id="team-list" class="space-y-2 max-h-60 overflow-y-auto mb-4"></div>
             </div>
@@ -203,71 +239,121 @@
 
         let techs = [];
         let teams = [
-            { name: "63 - Cherrie", id: "63" }, { name: "115 - Barbie", id: "115" },
-            { name: "57 - Noel", id: "57" }, { name: "123 - Jeave", id: "123" },
-            { name: "114 - Anderson", id: "114" }, { name: "64 - Ella", id: "64" }
+            { name: "63 - Cherrie", id: "63", shift: "day" },
+            { name: "115 - Barbie", id: "115", shift: "day" },
+            { name: "57 - Noel", id: "57", shift: "day" },
+            { name: "123 - Jeave", id: "123", shift: "night" },
+            { name: "114 - Anderson", id: "114", shift: "night" },
+            { name: "64 - Ella", id: "64", shift: "night" }
         ];
 
         let currentAssignments = {};
+        let shuffleScope = 'all'; 
 
         function init() {
-            const savedTechs = localStorage.getItem('techs_v2');
-            const savedTeams = localStorage.getItem('teams');
+            const savedTechs = localStorage.getItem('techs_v4');
+            const savedTeams = localStorage.getItem('teams_v4');
             if(savedTechs) techs = JSON.parse(savedTechs);
             else techs = [...DEFAULT_TECHS];
             if(savedTeams) teams = JSON.parse(savedTeams);
-            shuffleBalanced();
+            
+            // Initial distribution
+            distributeInitial();
+            renderGrid();
         }
 
-        /**
-         * Shuffles team member sizes and quality distribution
-         */
+        // Helper to perform initial fair split
+        function distributeInitial() {
+            const sorted = [...techs].sort((a,b) => b.quality - a.quality);
+            const teamCount = teams.length;
+            
+            teams.forEach(t => currentAssignments[t.name] = []);
+            
+            sorted.forEach((tech, index) => {
+                const teamIndex = index % teamCount;
+                currentAssignments[teams[teamIndex].name].push(tech);
+            });
+        }
+
+        function setShuffleScope(scope) {
+            shuffleScope = scope;
+            ['all', 'day', 'night'].forEach(s => {
+                const btn = document.getElementById(`scope-${s}`);
+                if(s === scope) {
+                    btn.classList.add('bg-white', 'shadow-sm', 'text-gray-900');
+                    btn.classList.remove('text-gray-500');
+                } else {
+                    btn.classList.remove('bg-white', 'shadow-sm', 'text-gray-900');
+                    btn.classList.add('text-gray-500');
+                }
+            });
+        }
+
         function shuffleBalanced() {
             if (!teams.length || !techs.length) return;
 
-            // 1. Determine dynamic team sizes
-            // We calculate a base size and then randomly distribute the remainder
-            const totalTechs = techs.length;
-            const numTeams = teams.length;
-            const baseSize = Math.floor(totalTechs / numTeams);
-            const remainder = totalTechs % numTeams;
+            let activeTeams = [];
+            let poolToShuffle = [];
 
-            // Create a size map [baseSize, baseSize+1, etc.] and shuffle it
-            let targetSizes = Array(numTeams).fill(baseSize);
-            for(let i = 0; i < remainder; i++) targetSizes[i]++;
-            targetSizes.sort(() => Math.random() - 0.5);
+            if (shuffleScope === 'all') {
+                // Shuffle everyone globally
+                activeTeams = [...teams];
+                poolToShuffle = [...techs];
+            } else {
+                // Strict isolation: Only shuffle techs already in the specific shift
+                activeTeams = teams.filter(t => t.shift === shuffleScope);
+                poolToShuffle = activeTeams.flatMap(t => currentAssignments[t.name] || []);
+                
+                // Safety check: if pool is empty (no previous assignment), take global tech pool slice
+                if (poolToShuffle.length === 0) {
+                    poolToShuffle = techs.filter(t => {
+                        const isAssignedElsewhere = teams.some(team => 
+                            team.shift !== shuffleScope && 
+                            (currentAssignments[team.name] || []).some(m => m.id === t.id)
+                        );
+                        return !isAssignedElsewhere;
+                    });
+                }
+            }
 
-            const teamCapacities = {};
-            teams.forEach((t, i) => teamCapacities[t.name] = targetSizes[i]);
+            if (!activeTeams.length || !poolToShuffle.length) return;
 
-            // 2. Distribute techs by quality into the predefined sizes
-            const sortedTechs = [...techs].sort((a, b) => (b.quality - a.quality) || (Math.random() - 0.5));
-            
-            currentAssignments = {};
-            const teamCurrentStats = {};
-            teams.forEach(t => {
+            // 1. Calculate dynamic sizes for active teams based on the specific pool size
+            const total = poolToShuffle.length;
+            const count = activeTeams.length;
+            const base = Math.floor(total / count);
+            const rem = total % count;
+            let sizes = Array(count).fill(base);
+            for(let i=0; i<rem; i++) sizes[i]++;
+            sizes.sort(() => Math.random() - 0.5);
+
+            const caps = {};
+            activeTeams.forEach((t, i) => caps[t.name] = sizes[i]);
+
+            // 2. Clear current assignments for these specific teams
+            activeTeams.forEach(t => {
                 currentAssignments[t.name] = [];
-                teamCurrentStats[t.name] = 0;
             });
 
-            sortedTechs.forEach(tech => {
-                // Find teams that still have capacity
-                const availableTeams = teams.filter(t => currentAssignments[t.name].length < teamCapacities[t.name]);
-                
-                if (availableTeams.length > 0) {
-                    // Among available teams, pick the one with the lowest total quality
-                    let bestTeam = availableTeams[0].name;
-                    let minQualitySum = Infinity;
+            // 3. Balanced Greedy Distribution
+            const sortedPool = [...poolToShuffle].sort((a, b) => (b.quality - a.quality) || (Math.random() - 0.5));
+            const teamStats = {};
+            activeTeams.forEach(t => teamStats[t.name] = 0);
 
-                    availableTeams.forEach(t => {
-                        if (teamCurrentStats[t.name] < minQualitySum) {
-                            minQualitySum = teamCurrentStats[t.name];
-                            bestTeam = t.name;
+            sortedPool.forEach(tech => {
+                const available = activeTeams.filter(t => currentAssignments[t.name].length < caps[t.name]);
+                if (available.length > 0) {
+                    // Pick the team with the lowest current total quality to maintain balance
+                    let best = available[0].name;
+                    let minQ = Infinity;
+                    available.forEach(t => {
+                        if (teamStats[t.name] < minQ) {
+                            minQ = teamStats[t.name];
+                            best = t.name;
                         }
                     });
-
-                    currentAssignments[bestTeam].push(tech);
-                    teamCurrentStats[bestTeam] += tech.quality;
+                    currentAssignments[best].push(tech);
+                    teamStats[best] += tech.quality;
                 }
             });
 
@@ -275,8 +361,10 @@
         }
 
         function renderGrid() {
-            const container = document.getElementById('teams-container');
-            container.innerHTML = '';
+            const dayCont = document.getElementById('teams-container-day');
+            const nightCont = document.getElementById('teams-container-night');
+            dayCont.innerHTML = '';
+            nightCont.innerHTML = '';
 
             teams.forEach(team => {
                 const members = currentAssignments[team.name] || [];
@@ -294,23 +382,22 @@
                     </div>
                 `).join('');
 
-                // Fixed UI aesthetic: keep grid rows consistent but visually indicate empty
                 const maxDisplay = 14; 
                 const emptyCount = Math.max(0, maxDisplay - members.length);
                 for(let i = 0; i < emptyCount; i++) {
-                    membersHtml += `
-                        <div class="tech-row opacity-20">
-                            <div class="px-3 py-1 text-transparent">-</div>
-                            <div class="quality-cell px-2 py-1">-</div>
-                            <div class="id-cell px-2 py-1">-</div>
-                        </div>
-                    `;
+                    membersHtml += `<div class="tech-row opacity-10"><div class="px-3 py-1 text-transparent">-</div><div class="quality-cell px-2 py-1">-</div><div class="id-cell px-2 py-1">-</div></div>`;
                 }
 
                 card.innerHTML = `
                     <div class="team-header">
-                        <div class="p-2 border-r border-black flex items-center justify-center text-sm">${team.name}</div>
-                        <div class="flex items-center justify-center italic text-xs">ID: ${team.id}</div>
+                        <div class="p-2 border-r border-black flex flex-col justify-center">
+                            <span class="text-xs opacity-70 uppercase tracking-tighter">Team</span>
+                            <span class="text-sm truncate">${team.name}</span>
+                        </div>
+                        <div class="flex flex-col items-center justify-center italic text-[10px]">
+                            <span class="shift-badge ${team.shift === 'day' ? 'shift-day' : 'shift-night'}">${team.shift}</span>
+                            ID: ${team.id}
+                        </div>
                     </div>
                     <div class="sub-header">
                         <div class="px-3 py-1 flex items-center justify-center">Name</div>
@@ -319,11 +406,13 @@
                     </div>
                     <div class="bg-white flex-1">${membersHtml}</div>
                     <div class="team-footer">
-                        <span>Avg Qual: ${avgQuality}%</span>
+                        <span>Avg: ${avgQuality}%</span>
                         <span class="bg-gray-800 text-white px-2 rounded">Size: ${members.length}</span>
                     </div>
                 `;
-                container.appendChild(card);
+
+                if(team.shift === 'day') dayCont.appendChild(card);
+                else nightCont.appendChild(card);
             });
         }
 
@@ -355,13 +444,11 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-4">
-                        <div class="flex flex-col items-end">
-                            <div class="flex items-center gap-1">
-                                <input type="number" value="${m.quality}" 
-                                    onchange="updateQuality('${m.id}', this.value)"
-                                    class="w-12 text-right border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none bg-transparent font-bold text-blue-600">
-                                <span class="text-xs text-gray-400">%</span>
-                            </div>
+                        <div class="flex items-center gap-1">
+                            <input type="number" value="${m.quality}" 
+                                onchange="updateQuality('${m.id}', this.value)"
+                                class="w-12 text-right border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none bg-transparent font-bold text-blue-600">
+                            <span class="text-xs text-gray-400">%</span>
                         </div>
                         <button onclick="removeMember('${m.id}')" class="text-gray-300 hover:text-red-500 transition-colors p-2">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
@@ -377,7 +464,7 @@
             const tech = techs.find(t => t.id === id);
             if(tech) {
                 tech.quality = Math.min(100, Math.max(0, num));
-                saveAndRefresh();
+                saveData();
             }
         }
 
@@ -385,10 +472,10 @@
             const name = document.getElementById('new-name').value.trim();
             const id = document.getElementById('new-id').value.trim();
             let quality = parseInt(document.getElementById('new-quality').value);
-            if(!name || !id) return showToast("Please fill Name and ID");
+            if(!name || !id) return;
             if(isNaN(quality)) quality = getRandomQuality();
             techs.push({ name, id, quality: Math.min(100, Math.max(0, quality)) });
-            saveAndRefresh();
+            saveData();
             document.getElementById('new-name').value = '';
             document.getElementById('new-id').value = '';
             document.getElementById('new-quality').value = '';
@@ -397,15 +484,17 @@
 
         function removeMember(id) {
             techs = techs.filter(t => t.id !== id);
-            saveAndRefresh();
+            saveData();
             renderMemberList();
         }
 
         function resetToDefault() {
-            if(confirm("Reset to default technician list?")) {
+            if(confirm("Reset to default?")) {
                 techs = [...DEFAULT_TECHS].map(t => ({...t, quality: getRandomQuality()}));
-                saveAndRefresh();
+                distributeInitial();
+                saveData();
                 renderMemberList();
+                renderGrid();
             }
         }
 
@@ -414,8 +503,8 @@
             list.innerHTML = teams.map((t, i) => `
                 <div class="flex items-center justify-between bg-gray-50 p-2 rounded border">
                     <div>
+                        <span class="shift-badge ${t.shift === 'day' ? 'shift-day' : 'shift-night'} text-[9px] mr-2">${t.shift}</span>
                         <span class="font-bold text-gray-700">${t.name}</span>
-                        <span class="text-xs text-gray-400 ml-2">ID: ${t.id}</span>
                     </div>
                     <button onclick="removeTeam(${i})" class="text-gray-300 hover:text-red-500 transition-colors p-1">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
@@ -426,34 +515,29 @@
 
         function addTeam() {
             const name = document.getElementById('team-name').value.trim();
+            const shift = document.getElementById('team-shift').value;
             if(!name) return;
             const id = name.includes('-') ? name.split('-')[0].trim() : name.substring(0,3);
-            teams.push({ name, id });
-            saveAndRefresh();
+            teams.push({ name, id, shift });
+            if(!currentAssignments[name]) currentAssignments[name] = [];
+            saveData();
             document.getElementById('team-name').value = '';
             renderTeamList();
-            shuffleBalanced();
-        }
-
-        function removeTeam(index) {
-            teams.splice(index, 1);
-            saveAndRefresh();
-            renderTeamList();
-            shuffleBalanced();
-        }
-
-        function saveAndRefresh() {
-            localStorage.setItem('techs_v2', JSON.stringify(techs));
-            localStorage.setItem('teams', JSON.stringify(teams));
             renderGrid();
         }
 
-        function showToast(msg) {
-            const t = document.createElement('div');
-            t.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full text-sm z-[100] shadow-xl';
-            t.innerText = msg;
-            document.body.appendChild(t);
-            setTimeout(() => t.remove(), 2000);
+        function removeTeam(index) {
+            const team = teams[index];
+            delete currentAssignments[team.name];
+            teams.splice(index, 1);
+            saveData();
+            renderTeamList();
+            renderGrid();
+        }
+
+        function saveData() {
+            localStorage.setItem('techs_v4', JSON.stringify(techs));
+            localStorage.setItem('teams_v4', JSON.stringify(teams));
         }
 
         window.onload = init;
