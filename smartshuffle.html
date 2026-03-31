@@ -78,9 +78,21 @@
         .btn { transition: all 0.2s; cursor: pointer; }
         .btn:active { transform: scale(0.95); }
         .modal-container { backdrop-filter: blur(4px); }
+
+        /* Notification Animation */
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .toast {
+            animation: slideIn 0.3s ease-out forwards;
+        }
     </style>
 </head>
 <body class="p-4 md:p-8 pb-24">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-5 right-5 z-[100] flex flex-col gap-2"></div>
 
     <div class="max-w-7xl mx-auto">
         <!-- Header -->
@@ -118,11 +130,26 @@
         </div>
 
         <!-- Shift 2 / Night -->
-        <div>
+        <div class="mb-10">
             <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-indigo-600 uppercase tracking-wider">
                 <span class="w-2 h-6 bg-indigo-500 rounded-full"></span> Night Shift
             </h2>
             <div id="teams-container-night" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </div>
+
+        <!-- Shuffle Log Section -->
+        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+            <div class="p-4 bg-gray-50 border-b flex justify-between items-center">
+                <h3 class="font-bold text-gray-700 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm64-88a8,8,0,0,1-8,8H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48A8,8,0,0,1,192,128Z"></path></svg>
+                    Shuffle History Log
+                </h3>
+                <button onclick="clearLog()" class="text-[10px] font-bold text-gray-400 hover:text-red-500 uppercase tracking-widest">Clear History</button>
+            </div>
+            <div id="shuffle-log" class="max-h-60 overflow-y-auto text-sm">
+                <!-- Log entries injected here -->
+                <div class="p-8 text-center text-gray-400 italic">No shuffle history yet.</div>
+            </div>
         </div>
         
         <div class="mt-12 pt-8 border-t border-gray-200 flex justify-between items-center px-4">
@@ -328,21 +355,26 @@
         let teams = [];
         let currentAssignments = {};
         let shuffleScope = 'all';
+        let shuffleHistory = [];
 
         function init() {
-            const savedTechs = localStorage.getItem('tech_roster_v4');
-            const savedTeams = localStorage.getItem('team_roster_v4');
+            const savedTechs = localStorage.getItem('tech_roster_v5');
+            const savedTeams = localStorage.getItem('team_roster_v5');
+            const savedHistory = localStorage.getItem('shuffle_history_v5');
             
             techs = savedTechs ? JSON.parse(savedTechs) : [...INITIAL_TECHS];
             teams = savedTeams ? JSON.parse(savedTeams) : [...INITIAL_TEAMS];
+            shuffleHistory = savedHistory ? JSON.parse(savedHistory) : [];
             
             resetToDefault();
             renderGrid();
+            renderLog();
         }
 
         function saveData() {
-            localStorage.setItem('tech_roster_v4', JSON.stringify(techs));
-            localStorage.setItem('team_roster_v4', JSON.stringify(teams));
+            localStorage.setItem('tech_roster_v5', JSON.stringify(techs));
+            localStorage.setItem('team_roster_v5', JSON.stringify(teams));
+            localStorage.setItem('shuffle_history_v5', JSON.stringify(shuffleHistory));
         }
 
         function resetToDefault() {
@@ -365,14 +397,64 @@
             });
         }
 
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast px-4 py-3 rounded-lg shadow-xl border-l-4 text-sm font-medium flex items-center gap-3 bg-white 
+                ${type === 'success' ? 'border-green-500 text-gray-800' : 'border-red-500 text-gray-800'}`;
+            
+            toast.innerHTML = `
+                <div class="${type === 'success' ? 'text-green-500' : 'text-red-500'}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm45.66,85.66-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32Z"></path></svg>
+                </div>
+                <span>${message}</span>
+            `;
+            
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(20px)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
         function shuffleBalanced() {
-            if (shuffleScope === 'all') {
+            const timestamp = new Date().toLocaleString();
+            let logDetails = [];
+
+            if (shuffleScope === 'all' || shuffleScope === 'day') {
                 performShiftShuffle('day');
-                performShiftShuffle('night');
-            } else {
-                performShiftShuffle(shuffleScope);
+                logDetails.push('Day Shift');
             }
+            if (shuffleScope === 'all' || shuffleScope === 'night') {
+                performShiftShuffle('night');
+                logDetails.push('Night Shift');
+            }
+
+            // Capture resulting balance for the log
+            const balanceSnapshot = teams.map(team => {
+                const members = currentAssignments[team.id] || [];
+                const teamScore = members.reduce((sum, m) => sum + m.quality, 0);
+                const shiftMetrics = getShiftMetrics(team.shift);
+                const ratio = shiftMetrics.avg > 0 ? (teamScore / shiftMetrics.avg) * 100 : 100;
+                return { name: team.name, balance: ratio.toFixed(1) + '%' };
+            });
+
+            shuffleHistory.unshift({
+                time: timestamp,
+                scope: shuffleScope.toUpperCase(),
+                details: logDetails.join(' & '),
+                stats: balanceSnapshot
+            });
+
+            // Keep only last 50 logs
+            if(shuffleHistory.length > 50) shuffleHistory.pop();
+
+            saveData();
             renderGrid();
+            renderLog();
+            showToast(`Shuffle successful: ${logDetails.join(' & ')} updated.`);
         }
 
         function performShiftShuffle(shift) {
@@ -414,12 +496,8 @@
             const shiftTeams = teams.filter(t => t.shift === shift);
             const shiftTechs = techs.filter(t => t.shift === shift);
             if(!shiftTechs.length) return { avg: 0 };
-            
             const totalQuality = shiftTechs.reduce((acc, curr) => acc + curr.quality, 0);
-            return {
-                avg: totalQuality / shiftTeams.length,
-                total: totalQuality
-            };
+            return { avg: totalQuality / (shiftTeams.length || 1), total: totalQuality };
         }
 
         function renderGrid() {
@@ -497,6 +575,41 @@
             });
         }
 
+        function renderLog() {
+            const logElement = document.getElementById('shuffle-log');
+            if(!shuffleHistory.length) {
+                logElement.innerHTML = `<div class="p-8 text-center text-gray-400 italic">No shuffle history yet.</div>`;
+                return;
+            }
+
+            logElement.innerHTML = shuffleHistory.map(entry => `
+                <div class="border-b last:border-0 hover:bg-gray-50 transition-colors">
+                    <div class="p-3 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <span class="bg-gray-100 px-2 py-1 rounded text-[10px] font-bold text-gray-600">${entry.scope}</span>
+                            <span class="text-xs font-bold text-gray-700">${entry.details}</span>
+                            <span class="text-[10px] text-gray-400 font-mono">${entry.time}</span>
+                        </div>
+                        <div class="flex gap-2">
+                            ${entry.stats.map(s => `
+                                <div class="flex flex-col items-center">
+                                    <span class="text-[8px] text-gray-400 uppercase leading-none">${s.name.split('-')[1]?.trim() || s.name}</span>
+                                    <span class="text-[10px] font-bold ${parseFloat(s.balance) < 95 ? 'text-red-500' : 'text-gray-600'} leading-tight">${s.balance}</span>
+                                </div>
+                            `).join('<div class="w-px h-4 bg-gray-200 mt-2"></div>')}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function clearLog() {
+            shuffleHistory = [];
+            saveData();
+            renderLog();
+            showToast("Shuffle history cleared");
+        }
+
         function addNewTech() {
             const id = document.getElementById('new-tech-id').value.trim();
             const name = document.getElementById('new-tech-name').value.trim();
@@ -504,7 +617,10 @@
             const shift = document.getElementById('new-tech-shift').value;
 
             if(!id || !name) return;
-            if(techs.some(t => t.id === id)) return;
+            if(techs.some(t => t.id === id)) {
+                showToast("Tech ID already exists", "error");
+                return;
+            }
 
             techs.push({
                 id, name, quality: quality || 80, shift,
@@ -512,6 +628,7 @@
             });
             saveData();
             renderMemberList();
+            showToast(`Added ${name} to roster`);
             document.getElementById('new-tech-id').value = '';
             document.getElementById('new-tech-name').value = '';
         }
@@ -522,27 +639,35 @@
             const shift = document.getElementById('new-team-shift').value;
 
             if(!id || !name) return;
-            if(teams.some(t => t.id === id)) return;
+            if(teams.some(t => t.id === id)) {
+                showToast("Team ID already exists", "error");
+                return;
+            }
 
             teams.push({ id, name, shift });
             currentAssignments[id] = [];
             saveData();
             renderTeamEditor();
+            showToast(`Created team: ${name}`);
             document.getElementById('new-team-id').value = '';
             document.getElementById('new-team-name').value = '';
         }
 
         function removeTech(id) {
-            techs = techs.filter(t => t.id !== id);
+            const t = techs.find(x => x.id === id);
+            techs = techs.filter(x => x.id !== id);
             saveData();
             renderMemberList();
+            showToast(`Removed ${t.name} from roster`);
         }
 
         function removeTeam(id) {
             if(teams.length <= 1) return;
-            teams = teams.filter(t => t.id !== id);
+            const t = teams.find(x => x.id === id);
+            teams = teams.filter(x => x.id !== id);
             saveData();
             renderTeamEditor();
+            showToast(`Deleted team ${t.name}`);
         }
 
         function openModal(id) {
@@ -574,9 +699,7 @@
                     <div class="flex items-center gap-2">
                         <div class="flex flex-col items-end">
                              <label class="text-[8px] font-bold text-gray-400">QUALITY</label>
-                             <input type="number" 
-                               value="${m.quality}" 
-                               onchange="updateTechQuality('${m.id}', this.value)"
+                             <input type="number" value="${m.quality}" onchange="updateTechQuality('${m.id}', this.value)"
                                class="w-12 border rounded bg-gray-50 text-center text-xs font-bold p-1">
                         </div>
                         <button onclick="removeTech('${m.id}')" class="text-gray-300 hover:text-red-500 transition-colors">
