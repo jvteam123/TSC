@@ -3,48 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tech Team Shuffler & Manager</title>
+    <title>Tech Ops | Advanced Shuffler v1.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
         
+        :root {
+            --brand-primary: #f59e0b;
+            --brand-dark: #111827;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .glass-header {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
         }
 
         .team-card {
             border: 1px solid #000;
-            min-height: 520px;
+            min-height: 540px;
             background: white;
             display: flex;
             flex-direction: column;
-            transition: transform 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .team-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px -10px rgba(0,0,0,0.1);
         }
 
         .team-header {
-            background-color: #f5b942;
+            background-color: var(--brand-primary);
             border-bottom: 2px solid #000;
-            font-weight: bold;
+            font-weight: 800;
             display: grid;
-            grid-template-columns: 1fr 80px;
+            grid-template-columns: 1fr 85px;
         }
 
         .shift-badge {
-            font-size: 10px;
-            padding: 2px 6px;
-            border-radius: 4px;
+            font-size: 9px;
+            padding: 1px 6px;
+            border-radius: 99px;
             text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.05em;
         }
 
-        .shift-day { background-color: #fef3c7; color: #92400e; }
-        .shift-night { background-color: #e0e7ff; color: #3730a3; }
+        .shift-day { background-color: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+        .shift-night { background-color: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe; }
 
         .sub-header {
-            background-color: #4b5563;
+            background-color: #1e293b;
             color: white;
             text-transform: uppercase;
-            font-size: 0.7rem;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
             display: grid;
             grid-template-columns: 1fr 80px;
         }
@@ -52,223 +74,248 @@
         .tech-row {
             display: grid;
             grid-template-columns: 1fr 80px;
-            border-bottom: 1px solid #e5e7eb;
-            font-size: 0.85rem;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 13px;
         }
 
-        .tech-row:nth-child(even) { background-color: #fafafa; }
+        .tech-row:last-child { border-bottom: none; }
+        .tech-row:nth-child(even) { background-color: #f8fafc; }
 
         .id-cell {
-            border-left: 1px solid #e5e7eb;
+            border-left: 1px solid #f1f5f9;
             text-align: center;
-            font-family: monospace;
+            font-family: 'ui-monospace', monospace;
+            color: #64748b;
         }
 
         .team-footer {
             margin-top: auto;
-            border-top: 1px solid #000;
-            background: #f9fafb;
-            padding: 8px;
-            font-size: 0.75rem;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
+            border-top: 2px solid #000;
+            background: #fff;
+            padding: 12px;
         }
 
-        .btn { transition: all 0.2s; cursor: pointer; }
-        .btn:active { transform: scale(0.95); }
-        .modal-container { backdrop-filter: blur(4px); }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        /* Notification Animation */
+        .toast {
+            animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
         @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
+            from { transform: translateX(120%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
-        .toast {
-            animation: slideIn 0.3s ease-out forwards;
+
+        .balance-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
         }
     </style>
 </head>
-<body class="p-4 md:p-8 pb-24">
+<body class="pb-20">
 
-    <!-- Toast Notification Container -->
-    <div id="toast-container" class="fixed top-5 right-5 z-[100] flex flex-col gap-2"></div>
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-6 right-6 z-[100] flex flex-col gap-3"></div>
 
-    <div class="max-w-7xl mx-auto">
-        <!-- Header -->
-        <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 gap-6 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-800">Tech Operations Shuffler</h1>
-                <p class="text-gray-500 text-sm">Balanced Shuffling & Quality Metrics</p>
+    <!-- Sticky Navigation -->
+    <nav class="glass-header sticky top-0 z-40 px-6 py-4">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-black rounded-lg flex items-center justify-center text-white font-black text-xl">T</div>
+                <div>
+                    <h1 class="font-extrabold text-lg leading-none tracking-tight">TECH OPS</h1>
+                    <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Resource Balancer v1.0</p>
+                </div>
             </div>
-            
-            <div class="flex flex-wrap items-center gap-3 w-full xl:w-auto">
-                <div class="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
-                    <button onclick="setShuffleScope('all')" id="scope-all" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors bg-white shadow-sm text-gray-900">All Shifts</button>
-                    <button onclick="setShuffleScope('day')" id="scope-day" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors text-gray-500 hover:text-gray-700">Day Only</button>
-                    <button onclick="setShuffleScope('night')" id="scope-night" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors text-gray-500 hover:text-gray-700">Night Only</button>
+
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+                    <button onclick="setShuffleScope('all')" id="scope-all" class="px-4 py-2 rounded-lg text-xs font-bold transition-all bg-white shadow-sm text-slate-900">ALL</button>
+                    <button onclick="setShuffleScope('day')" id="scope-day" class="px-4 py-2 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-slate-800">DAY</button>
+                    <button onclick="setShuffleScope('night')" id="scope-night" class="px-4 py-2 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-slate-800">NIGHT</button>
                 </div>
 
-                <div class="flex gap-2">
-                    <button onclick="openModal('team-modal')" class="btn bg-gray-800 hover:bg-black text-white px-4 py-2 rounded-lg font-medium text-sm">Manage Teams</button>
-                    <button onclick="openModal('member-modal')" class="btn bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium text-sm">Manage Techs</button>
-                </div>
+                <div class="h-8 w-[1px] bg-slate-200 mx-1 hidden md:block"></div>
+
+                <button onclick="openModal('member-modal')" class="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm" title="Manage Staff">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </button>
                 
-                <button onclick="shuffleBalanced()" class="btn bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-orange-200">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
-                    SHUFFLE SELECTED
+                <button onclick="openModal('team-modal')" class="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm" title="Manage Teams">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+                </button>
+
+                <button onclick="exportToCSV()" class="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm" title="Export CSV">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                </button>
+
+                <button onclick="shuffleBalanced()" class="bg-amber-500 hover:bg-amber-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-amber-200 flex items-center gap-2 transition-all active:scale-95">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                    RUN SHUFFLE
                 </button>
             </div>
         </div>
+    </nav>
 
-        <!-- Shift 1 / Day -->
-        <div class="mb-10">
-            <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-orange-600 uppercase tracking-wider">
-                <span class="w-2 h-6 bg-orange-500 rounded-full"></span> Day Shift
-            </h2>
-            <div id="teams-container-day" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-        </div>
+    <main class="max-w-7xl mx-auto px-6 mt-8">
+        <!-- Day Section -->
+        <section class="mb-12">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xs font-black uppercase tracking-[0.2em] text-slate-400 flex items-center gap-3">
+                    <span class="w-8 h-[1px] bg-slate-200"></span> 01. DAY SHIFT OPERATIONS
+                </h2>
+                <div id="day-summary" class="text-[10px] font-bold text-slate-400"></div>
+            </div>
+            <div id="teams-container-day" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+        </section>
 
-        <!-- Shift 2 / Night -->
-        <div class="mb-10">
-            <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-indigo-600 uppercase tracking-wider">
-                <span class="w-2 h-6 bg-indigo-500 rounded-full"></span> Night Shift
-            </h2>
-            <div id="teams-container-night" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-        </div>
+        <!-- Night Section -->
+        <section class="mb-12">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xs font-black uppercase tracking-[0.2em] text-slate-400 flex items-center gap-3">
+                    <span class="w-8 h-[1px] bg-slate-200"></span> 02. NIGHT SHIFT OPERATIONS
+                </h2>
+                <div id="night-summary" class="text-[10px] font-bold text-slate-400"></div>
+            </div>
+            <div id="teams-container-night" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+        </section>
 
-        <!-- Shuffle Log Section -->
-        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-            <div class="p-4 bg-gray-50 border-b flex justify-between items-center">
-                <h3 class="font-bold text-gray-700 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm64-88a8,8,0,0,1-8,8H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48A8,8,0,0,1,192,128Z"></path></svg>
-                    Shuffle History Log
+        <!-- History Log -->
+        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                <h3 class="font-bold text-sm text-slate-700 flex items-center gap-2 uppercase tracking-tight">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    Audit Log & Power Metrics
                 </h3>
-                <button onclick="clearLog()" class="text-[10px] font-bold text-gray-400 hover:text-red-500 uppercase tracking-widest">Clear History</button>
+                <button onclick="clearLog()" class="text-[10px] font-bold text-slate-400 hover:text-red-500 transition-colors uppercase tracking-widest">Wipe Audit Data</button>
             </div>
-            <div id="shuffle-log" class="max-h-60 overflow-y-auto text-sm">
-                <!-- Log entries injected here -->
-                <div class="p-8 text-center text-gray-400 italic">No shuffle history yet.</div>
+            <div id="shuffle-log" class="max-h-72 overflow-y-auto">
+                <div class="p-12 text-center text-slate-300 italic text-sm">No activity recorded in current session.</div>
             </div>
-        </div>
-        
-        <div class="mt-12 pt-8 border-t border-gray-200 flex justify-between items-center px-4">
-            <p class="text-gray-400 text-xs italic">Data persistent in local storage</p>
-            <button onclick="confirmFullReset()" class="text-gray-400 hover:text-red-600 flex items-center gap-2 text-sm transition-colors p-2 rounded hover:bg-red-50">Reset to Defaults</button>
-        </div>
-    </div>
+        </section>
 
-    <!-- Modal: Manage Techs -->
-    <div id="member-modal" class="hidden fixed inset-0 bg-black/60 modal-container flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-            <div class="p-6 bg-gray-50 border-b flex justify-between items-center">
+        <div class="mt-16 pt-8 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
+            <p>© 2024 TECH OPS RESOURCE MANAGEMENT SYSTEM</p>
+            <div class="flex gap-6">
+                <button onclick="confirmFullReset()" class="hover:text-red-500 transition-colors">Factory Reset</button>
+                <span>BUILD 1.0.0-FINAL</span>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal: Staff -->
+    <div id="member-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+        <div class="bg-white rounded-3xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200">
+            <div class="p-8 border-b flex justify-between items-center">
                 <div>
-                    <h2 class="text-xl font-bold text-gray-800">Technician Management</h2>
-                    <p class="text-xs text-gray-500">Update staff IDs, Quality, and Shift assignments</p>
+                    <h2 class="text-2xl font-black text-slate-800 tracking-tight">Roster Management</h2>
+                    <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Configure staff quality and shift availability</p>
                 </div>
-                <button onclick="closeModals()" class="w-10 h-10 flex items-center justify-center bg-gray-200 rounded-full text-xl hover:bg-gray-300 transition-colors">&times;</button>
+                <button onclick="closeModals()" class="w-12 h-12 flex items-center justify-center bg-slate-100 rounded-full hover:bg-slate-200 transition-all">&times;</button>
             </div>
             
             <div class="flex flex-col lg:flex-row flex-1 overflow-hidden">
-                <!-- Add Tech Form -->
-                <div class="w-full lg:w-72 bg-gray-50 p-6 border-r border-gray-200">
-                    <h3 class="font-bold text-sm text-gray-700 mb-4 uppercase tracking-wider">Add New Tech</h3>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="text-[10px] font-bold text-gray-400 block mb-1">Tech ID</label>
-                            <input type="text" id="new-tech-id" placeholder="e.g. 7092RN" class="w-full border rounded p-2 text-sm">
+                <div class="w-full lg:w-80 bg-slate-50 p-8 border-r border-slate-200">
+                    <h3 class="font-black text-[10px] text-slate-400 mb-6 uppercase tracking-[0.2em]">Add New Resource</h3>
+                    <div class="space-y-5">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Technician ID</label>
+                            <input type="text" id="new-tech-id" placeholder="e.g. 1234AB" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 ring-amber-500 outline-none transition-all">
                         </div>
-                        <div>
-                            <label class="text-[10px] font-bold text-gray-400 block mb-1">Full Name</label>
-                            <input type="text" id="new-tech-name" class="w-full border rounded p-2 text-sm">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Full Name</label>
+                            <input type="text" id="new-tech-name" placeholder="John Doe" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 ring-amber-500 outline-none transition-all">
                         </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="text-[10px] font-bold text-gray-400 block mb-1">Quality</label>
-                                <input type="number" id="new-tech-quality" value="80" min="1" max="100" class="w-full border rounded p-2 text-sm">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Quality</label>
+                                <input type="number" id="new-tech-quality" value="80" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none transition-all">
                             </div>
-                            <div>
-                                <label class="text-[10px] font-bold text-gray-400 block mb-1">Shift</label>
-                                <select id="new-tech-shift" class="w-full border rounded p-2 text-sm">
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Shift</label>
+                                <select id="new-tech-shift" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none transition-all appearance-none">
                                     <option value="day">Day</option>
                                     <option value="night">Night</option>
                                 </select>
                             </div>
                         </div>
-                        <button onclick="addNewTech()" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold text-sm shadow-md hover:bg-blue-700 transition-colors mt-2">Create Tech</button>
+                        <button onclick="addNewTech()" class="w-full bg-slate-900 text-white py-4 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg hover:bg-black transition-all active:scale-95 mt-4">Register Tech</button>
                     </div>
                 </div>
 
-                <!-- Tech List -->
-                <div class="flex-1 p-6 overflow-y-auto">
-                    <h3 class="font-bold text-sm text-gray-700 mb-4 uppercase tracking-wider">Current Roster</h3>
-                    <div id="member-list" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                <div class="flex-1 p-8 overflow-y-auto">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="font-black text-[10px] text-slate-400 uppercase tracking-[0.2em]">Active Roster</h3>
+                        <div id="roster-count" class="text-[10px] font-bold text-slate-400"></div>
+                    </div>
+                    <div id="member-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
                 </div>
-            </div>
-
-            <div class="p-4 bg-gray-50 border-t flex justify-end gap-3">
-                <button onclick="closeModals()" class="bg-gray-800 text-white px-8 py-2 rounded-lg font-bold">Save & Close</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal: Manage Teams -->
-    <div id="team-modal" class="hidden fixed inset-0 bg-black/60 modal-container flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-            <div class="p-6 bg-gray-50 border-b flex justify-between items-center">
-                <h2 class="text-xl font-bold text-gray-800">Manage Teams</h2>
-                <button onclick="closeModals()" class="text-2xl text-gray-400">&times;</button>
+    <!-- Modal: Teams -->
+    <div id="team-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+        <div class="bg-white rounded-3xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200">
+            <div class="p-8 border-b flex justify-between items-center">
+                <div>
+                    <h2 class="text-2xl font-black text-slate-800 tracking-tight">Team Configuration</h2>
+                    <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Define operational units and leads</p>
+                </div>
+                <button onclick="closeModals()" class="text-3xl text-slate-300 hover:text-slate-500 transition-colors">&times;</button>
             </div>
             
             <div class="flex flex-col lg:flex-row flex-1 overflow-hidden">
-                <!-- Add Team Form -->
-                <div class="w-full lg:w-72 bg-gray-50 p-6 border-r border-gray-200">
-                    <h3 class="font-bold text-sm text-gray-700 mb-4 uppercase tracking-wider">Add New Team</h3>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="text-[10px] font-bold text-gray-400 block mb-1">Team ID</label>
-                            <input type="text" id="new-team-id" placeholder="e.g. 99" class="w-full border rounded p-2 text-sm">
+                <div class="w-full lg:w-80 bg-slate-50 p-8 border-r border-slate-200">
+                    <h3 class="font-black text-[10px] text-slate-400 mb-6 uppercase tracking-[0.2em]">Define New Unit</h3>
+                    <div class="space-y-5">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Unit ID / Code</label>
+                            <input type="text" id="new-team-id" placeholder="e.g. 99" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none">
                         </div>
-                        <div>
-                            <label class="text-[10px] font-bold text-gray-400 block mb-1">Team/Lead Name</label>
-                            <input type="text" id="new-team-name" placeholder="e.g. 99 - Smith" class="w-full border rounded p-2 text-sm">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Team Designation</label>
+                            <input type="text" id="new-team-name" placeholder="e.g. 99 - Alpha" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none">
                         </div>
-                        <div>
-                            <label class="text-[10px] font-bold text-gray-400 block mb-1">Shift</label>
-                            <select id="new-team-shift" class="w-full border rounded p-2 text-sm">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Shift Assignment</label>
+                            <select id="new-team-shift" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none">
                                 <option value="day">Day</option>
                                 <option value="night">Night</option>
                             </select>
                         </div>
-                        <button onclick="addNewTeam()" class="w-full bg-green-600 text-white py-2 rounded-lg font-bold text-sm shadow-md hover:bg-green-700 transition-colors mt-2">Create Team</button>
+                        <button onclick="addNewTeam()" class="w-full bg-amber-500 text-white py-4 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg hover:bg-amber-600 transition-all active:scale-95 mt-4">Create Unit</button>
                     </div>
                 </div>
 
-                <div class="flex-1 p-6 overflow-y-auto" id="team-editor-list"></div>
-            </div>
-
-            <div class="p-4 bg-gray-50 border-t flex justify-end">
-                <button onclick="closeModals()" class="bg-gray-800 text-white px-8 py-2 rounded-lg font-bold">Done</button>
+                <div class="flex-1 p-8 overflow-y-auto bg-white" id="team-editor-list"></div>
             </div>
         </div>
     </div>
 
-    <!-- Confirm Reset -->
-    <div id="confirm-modal" class="hidden fixed inset-0 bg-black/80 modal-container flex items-center justify-center z-[70] p-4">
-        <div class="bg-white rounded-xl w-full max-w-sm p-6 text-center">
-            <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M160,56H96V40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8ZM216,64H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V80h8a8,8,0,0,0,0-16ZM192,208H64V80H192Z"></path></svg>
+    <!-- Confirm Dialog -->
+    <div id="confirm-modal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-8 text-center border border-slate-200 shadow-2xl">
+            <div class="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
             </div>
-            <h3 class="text-xl font-bold mb-2">Reset All Data?</h3>
-            <p class="text-gray-500 text-sm mb-6">This will restore original staff and team settings.</p>
-            <div class="flex gap-3">
-                <button onclick="closeModals()" class="flex-1 bg-gray-100 py-2 rounded-lg font-medium">Cancel</button>
-                <button onclick="executeFullReset()" class="flex-1 bg-red-600 text-white py-2 rounded-lg font-medium">Reset Now</button>
+            <h3 class="text-2xl font-black text-slate-800 mb-2">Hard Reset?</h3>
+            <p class="text-slate-400 text-sm mb-8 font-medium">This will permanently delete all custom staff, teams, and audit history.</p>
+            <div class="flex gap-4">
+                <button onclick="closeModals()" class="flex-1 bg-slate-100 py-4 rounded-2xl font-bold text-slate-600 text-xs uppercase tracking-widest hover:bg-slate-200 transition-all">Cancel</button>
+                <button onclick="executeFullReset()" class="flex-1 bg-red-500 text-white py-4 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-red-600 shadow-lg shadow-red-100 transition-all">Confirm</button>
             </div>
         </div>
     </div>
 
     <script>
+        // Data Structures
         const INITIAL_TEAMS = [
             { id: "63", name: "63 - Cherrie", shift: "day" },
             { id: "115", name: "115 - Barbie", shift: "day" },
@@ -357,24 +404,41 @@
         let shuffleScope = 'all';
         let shuffleHistory = [];
 
+        // Application Logic
         function init() {
-            const savedTechs = localStorage.getItem('tech_roster_v5');
-            const savedTeams = localStorage.getItem('team_roster_v5');
-            const savedHistory = localStorage.getItem('shuffle_history_v5');
+            const savedTechs = localStorage.getItem('tech_ops_v1_staff');
+            const savedTeams = localStorage.getItem('tech_ops_v1_teams');
+            const savedHistory = localStorage.getItem('tech_ops_v1_history');
             
             techs = savedTechs ? JSON.parse(savedTechs) : [...INITIAL_TECHS];
             teams = savedTeams ? JSON.parse(savedTeams) : [...INITIAL_TEAMS];
             shuffleHistory = savedHistory ? JSON.parse(savedHistory) : [];
+            
+            // Clean up possible broken references (Bug fix: Orphaning)
+            cleanupOrphanedTechs();
             
             resetToDefault();
             renderGrid();
             renderLog();
         }
 
+        function cleanupOrphanedTechs() {
+            const validTeamIds = teams.map(t => t.id);
+            techs.forEach(tech => {
+                if (!validTeamIds.includes(tech.defaultTeam)) {
+                    // Reassign to the first available team of the same shift
+                    const sameShiftTeam = teams.find(t => t.shift === tech.shift);
+                    if (sameShiftTeam) tech.defaultTeam = sameShiftTeam.id;
+                    else tech.defaultTeam = teams[0]?.id || "";
+                }
+            });
+            saveData();
+        }
+
         function saveData() {
-            localStorage.setItem('tech_roster_v5', JSON.stringify(techs));
-            localStorage.setItem('team_roster_v5', JSON.stringify(teams));
-            localStorage.setItem('shuffle_history_v5', JSON.stringify(shuffleHistory));
+            localStorage.setItem('tech_ops_v1_staff', JSON.stringify(techs));
+            localStorage.setItem('tech_ops_v1_teams', JSON.stringify(teams));
+            localStorage.setItem('tech_ops_v1_history', JSON.stringify(shuffleHistory));
         }
 
         function resetToDefault() {
@@ -391,82 +455,98 @@
             shuffleScope = scope;
             ['all', 'day', 'night'].forEach(s => {
                 const btn = document.getElementById(`scope-${s}`);
-                btn.className = s === scope ? 
-                    "px-3 py-1.5 rounded-md text-sm font-medium bg-white shadow-sm text-gray-900" : 
-                    "px-3 py-1.5 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 transition-all";
+                if (s === scope) {
+                    btn.classList.add('bg-white', 'shadow-sm', 'text-slate-900');
+                    btn.classList.remove('text-slate-500');
+                } else {
+                    btn.classList.remove('bg-white', 'shadow-sm', 'text-slate-900');
+                    btn.classList.add('text-slate-500');
+                }
             });
         }
 
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
-            toast.className = `toast px-4 py-3 rounded-lg shadow-xl border-l-4 text-sm font-medium flex items-center gap-3 bg-white 
-                ${type === 'success' ? 'border-green-500 text-gray-800' : 'border-red-500 text-gray-800'}`;
+            toast.className = `toast px-5 py-4 rounded-2xl shadow-2xl border-l-4 text-sm font-bold flex items-center gap-3 bg-white 
+                ${type === 'success' ? 'border-green-500 text-slate-800' : 'border-red-500 text-slate-800'}`;
             
-            toast.innerHTML = `
-                <div class="${type === 'success' ? 'text-green-500' : 'text-red-500'}">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm45.66,85.66-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32Z"></path></svg>
-                </div>
-                <span>${message}</span>
-            `;
+            const icon = type === 'success' ? 
+                '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#10b981" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm45.66,85.66-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32Z"></path></svg>' : 
+                '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#ef4444" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm37.66,130.34a8,8,0,0,1-11.32,11.32L128,139.31l-26.34,26.35a8,8,0,0,1-11.32-11.32L116.69,128,90.34,101.66a8,8,0,0,1,11.32-11.32L128,116.69l26.34-26.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>';
             
+            toast.innerHTML = `${icon} <span>${message}</span>`;
             container.appendChild(toast);
+            
             setTimeout(() => {
                 toast.style.opacity = '0';
                 toast.style.transform = 'translateX(20px)';
-                toast.style.transition = 'all 0.3s ease';
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
+                toast.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 1, 1)';
+                setTimeout(() => toast.remove(), 400);
+            }, 3500);
         }
 
         function shuffleBalanced() {
-            const timestamp = new Date().toLocaleString();
-            let logDetails = [];
+            const logDetails = [];
+            
+            // Safety check: Avoid logic errors if no teams exist
+            if (teams.length === 0) return showToast("No teams configured", "error");
 
             if (shuffleScope === 'all' || shuffleScope === 'day') {
-                performShiftShuffle('day');
-                logDetails.push('Day Shift');
+                const dayTeams = teams.filter(t => t.shift === 'day');
+                const dayTechs = techs.filter(t => t.shift === 'day');
+                if (dayTeams.length > 0 && dayTechs.length > 0) {
+                    performShiftShuffle('day');
+                    logDetails.push('Day Shift');
+                } else if(shuffleScope === 'day') {
+                    return showToast("Incomplete Day Shift configuration", "error");
+                }
             }
             if (shuffleScope === 'all' || shuffleScope === 'night') {
-                performShiftShuffle('night');
-                logDetails.push('Night Shift');
+                const nightTeams = teams.filter(t => t.shift === 'night');
+                const nightTechs = techs.filter(t => t.shift === 'night');
+                if (nightTeams.length > 0 && nightTechs.length > 0) {
+                    performShiftShuffle('night');
+                    logDetails.push('Night Shift');
+                } else if(shuffleScope === 'night') {
+                    return showToast("Incomplete Night Shift configuration", "error");
+                }
             }
 
-            // Capture resulting balance for the log
-            const balanceSnapshot = teams.map(team => {
-                const members = currentAssignments[team.id] || [];
-                const teamScore = members.reduce((sum, m) => sum + m.quality, 0);
-                const shiftMetrics = getShiftMetrics(team.shift);
-                const ratio = shiftMetrics.avg > 0 ? (teamScore / shiftMetrics.avg) * 100 : 100;
+            if (logDetails.length === 0) return showToast("Nothing to shuffle", "error");
+
+            // Build snapshot for log
+            const snapshot = teams.map(team => {
+                const m = currentAssignments[team.id] || [];
+                const score = m.reduce((s, x) => s + x.quality, 0);
+                const shiftAvg = getShiftMetrics(team.shift).avg;
+                const ratio = shiftAvg > 0 ? (score / shiftAvg) * 100 : 100;
                 return { name: team.name, balance: ratio.toFixed(1) + '%' };
             });
 
             shuffleHistory.unshift({
-                time: timestamp,
+                time: new Date().toLocaleString(),
                 scope: shuffleScope.toUpperCase(),
                 details: logDetails.join(' & '),
-                stats: balanceSnapshot
+                stats: snapshot
             });
 
-            // Keep only last 50 logs
-            if(shuffleHistory.length > 50) shuffleHistory.pop();
+            if(shuffleHistory.length > 30) shuffleHistory.pop();
 
             saveData();
             renderGrid();
             renderLog();
-            showToast(`Shuffle successful: ${logDetails.join(' & ')} updated.`);
+            showToast(`Optimization complete for ${logDetails.join(' & ')}.`);
         }
 
         function performShiftShuffle(shift) {
             const shiftTeams = teams.filter(t => t.shift === shift);
             const shiftTechs = techs.filter(t => t.shift === shift).sort((a,b) => (b.quality - a.quality) || (Math.random() - 0.5));
             
-            if(!shiftTeams.length || !shiftTechs.length) return;
-
+            const teamCaps = {};
             const baseSize = Math.floor(shiftTechs.length / shiftTeams.length);
             const remainder = shiftTechs.length % shiftTeams.length;
             
-            const teamCaps = {};
             shiftTeams.forEach((t, i) => {
                 teamCaps[t.id] = baseSize + (i < remainder ? 1 : 0);
                 currentAssignments[t.id] = [];
@@ -478,14 +558,8 @@
             shiftTechs.forEach(tech => {
                 const available = shiftTeams.filter(t => currentAssignments[t.id].length < teamCaps[t.id]);
                 if(available.length) {
-                    let bestTeam = available[0].id;
-                    let minScore = Infinity;
-                    available.forEach(t => {
-                        if(teamScores[t.id] < minScore) {
-                            minScore = teamScores[t.id];
-                            bestTeam = t.id;
-                        }
-                    });
+                    available.sort((a,b) => teamScores[a.id] - teamScores[b.id]);
+                    const bestTeam = available[0].id;
                     currentAssignments[bestTeam].push(tech);
                     teamScores[bestTeam] += tech.quality;
                 }
@@ -495,9 +569,12 @@
         function getShiftMetrics(shift) {
             const shiftTeams = teams.filter(t => t.shift === shift);
             const shiftTechs = techs.filter(t => t.shift === shift);
-            if(!shiftTechs.length) return { avg: 0 };
-            const totalQuality = shiftTechs.reduce((acc, curr) => acc + curr.quality, 0);
-            return { avg: totalQuality / (shiftTeams.length || 1), total: totalQuality };
+            const total = shiftTechs.reduce((a, b) => a + b.quality, 0);
+            return {
+                avg: total / (shiftTeams.length || 1),
+                count: shiftTechs.length,
+                teamCount: shiftTeams.length
+            };
         }
 
         function renderGrid() {
@@ -508,63 +585,74 @@
             const dayMetrics = getShiftMetrics('day');
             const nightMetrics = getShiftMetrics('night');
 
+            document.getElementById('day-summary').textContent = `${dayMetrics.count} STAFF / ${dayMetrics.teamCount} UNITS`;
+            document.getElementById('night-summary').textContent = `${nightMetrics.count} STAFF / ${nightMetrics.teamCount} UNITS`;
+
             teams.forEach(team => {
                 const members = currentAssignments[team.id] || [];
-                const teamScore = members.reduce((sum, m) => sum + m.quality, 0);
-                const shiftMetrics = team.shift === 'day' ? dayMetrics : nightMetrics;
-                const perfRatio = shiftMetrics.avg > 0 ? (teamScore / shiftMetrics.avg) * 100 : 100;
+                const score = members.reduce((sum, m) => sum + m.quality, 0);
+                const shiftAvg = (team.shift === 'day' ? dayMetrics : nightMetrics).avg;
+                const ratio = shiftAvg > 0 ? (score / shiftAvg) * 100 : 100;
                 
                 const card = document.createElement('div');
-                card.className = 'team-card shadow-sm hover:shadow-md transition-shadow';
+                card.className = 'team-card shadow-sm';
                 
+                let balanceColor = 'bg-slate-300';
+                let textColor = 'text-slate-800';
+                if(ratio < 95) { balanceColor = 'bg-red-500'; textColor = 'text-red-600'; }
+                if(ratio > 105) { balanceColor = 'bg-green-500'; textColor = 'text-green-600'; }
+
                 let html = `
                     <div class="team-header">
-                        <div class="p-2 border-r border-black flex flex-col justify-center">
-                            <span class="text-[10px] opacity-70 uppercase tracking-tighter">Team Name</span>
-                            <span class="text-sm truncate leading-tight font-bold">${team.name}</span>
+                        <div class="p-3 border-r border-black flex flex-col justify-center min-w-0">
+                            <span class="text-[8px] opacity-60 uppercase tracking-widest leading-none mb-1">Operational Unit</span>
+                            <span class="text-sm truncate leading-none uppercase">${team.name}</span>
                         </div>
-                        <div class="flex flex-col items-center justify-center italic text-[10px]">
-                            <span class="shift-badge ${team.shift === 'day' ? 'shift-day' : 'shift-night'} mb-0.5">${team.shift}</span>
-                            T_${team.id}
+                        <div class="flex flex-col items-center justify-center p-2">
+                            <span class="shift-badge ${team.shift === 'day' ? 'shift-day' : 'shift-night'} mb-1">${team.shift}</span>
+                            <span class="text-[9px] font-black opacity-50 tracking-tighter">ID:${team.id}</span>
                         </div>
                     </div>
                     <div class="sub-header">
-                        <div class="px-3 py-1 flex items-center justify-start">Name</div>
-                        <div class="flex items-center justify-center border-l border-white/20">ID</div>
+                        <div class="px-3 py-1.5">MEMBER DESIGNATION</div>
+                        <div class="flex items-center justify-center border-l border-white/10">AUTH_ID</div>
                     </div>
-                    <div class="bg-white flex-1">`;
+                    <div class="bg-white flex-1 overflow-hidden">`;
                 
                 members.forEach(m => {
                     html += `
-                        <div class="tech-row group hover:bg-yellow-50 transition-colors">
-                            <div class="px-3 py-1.5 text-gray-700 truncate font-medium flex items-center justify-between">
+                        <div class="tech-row group hover:bg-slate-50 transition-colors">
+                            <div class="px-3 py-2 text-slate-700 truncate font-semibold flex items-center justify-between">
                                 ${m.name}
-                                <span class="text-[9px] text-gray-400 opacity-0 group-hover:opacity-100 uppercase font-bold">Q:${m.quality}</span>
+                                <span class="text-[8px] text-slate-300 group-hover:text-amber-500 font-black">Q:${m.quality}</span>
                             </div>
-                            <div class="id-cell px-2 py-1.5 text-[11px] text-gray-500 flex items-center justify-center">${m.id}</div>
+                            <div class="id-cell px-2 py-2 text-[10px] flex items-center justify-center">${m.id}</div>
                         </div>`;
                 });
 
-                for(let i=0; i < Math.max(0, 14 - members.length); i++) {
-                    html += `<div class="tech-row opacity-[0.03]"><div class="px-3 py-1.5">-</div><div class="id-cell">-</div></div>`;
+                // Structural placeholders for visual consistency
+                const slots = 13;
+                for(let i=0; i < Math.max(0, slots - members.length); i++) {
+                    html += `<div class="tech-row opacity-[0.03]"><div class="px-3 py-2">-</div><div class="id-cell">-</div></div>`;
                 }
-
-                const ratioColor = perfRatio < 95 ? 'text-red-500' : (perfRatio > 105 ? 'text-green-600' : 'text-gray-800');
 
                 html += `</div>
                     <div class="team-footer">
-                        <div class="flex justify-between w-full">
-                            <span class="text-gray-400">Members: ${members.length}</span>
-                            <span class="text-gray-300">#${team.id}</span>
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Efficiency Metrics</span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="balance-indicator ${balanceColor}"></span>
+                                <span class="text-[10px] font-black ${textColor}">${ratio.toFixed(1)}%</span>
+                            </div>
                         </div>
-                        <div class="flex justify-between items-end w-full border-t border-gray-100 pt-1">
+                        <div class="flex justify-between items-end border-t border-slate-100 pt-3">
                              <div class="flex flex-col">
-                                <span class="text-[8px] text-gray-400 uppercase">Team Quality</span>
-                                <span class="text-xs font-bold">${teamScore} pts</span>
+                                <span class="text-[8px] text-slate-400 font-bold uppercase">Resource Count</span>
+                                <span class="text-xs font-black text-slate-800">${members.length} TECHS</span>
                              </div>
                              <div class="flex flex-col items-end">
-                                <span class="text-[8px] text-gray-400 uppercase">Power Balance</span>
-                                <span class="text-xs font-black ${ratioColor}">${perfRatio.toFixed(1)}%</span>
+                                <span class="text-[8px] text-slate-400 font-bold uppercase">Quality Sum</span>
+                                <span class="text-xs font-black text-slate-800">${score} PTS</span>
                              </div>
                         </div>
                     </div>`;
@@ -576,59 +664,78 @@
         }
 
         function renderLog() {
-            const logElement = document.getElementById('shuffle-log');
+            const logEl = document.getElementById('shuffle-log');
             if(!shuffleHistory.length) {
-                logElement.innerHTML = `<div class="p-8 text-center text-gray-400 italic">No shuffle history yet.</div>`;
+                logEl.innerHTML = `<div class="p-12 text-center text-slate-300 italic text-sm">No activity recorded in current session.</div>`;
                 return;
             }
 
-            logElement.innerHTML = shuffleHistory.map(entry => `
-                <div class="border-b last:border-0 hover:bg-gray-50 transition-colors">
-                    <div class="p-3 flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <span class="bg-gray-100 px-2 py-1 rounded text-[10px] font-bold text-gray-600">${entry.scope}</span>
-                            <span class="text-xs font-bold text-gray-700">${entry.details}</span>
-                            <span class="text-[10px] text-gray-400 font-mono">${entry.time}</span>
+            logEl.innerHTML = shuffleHistory.map(entry => `
+                <div class="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors p-4">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-slate-900 text-white px-2 py-1 rounded text-[9px] font-black tracking-widest">${entry.scope}</div>
+                            <div class="flex flex-col">
+                                <span class="text-xs font-bold text-slate-700">${entry.details} Optimization</span>
+                                <span class="text-[9px] text-slate-400 font-medium">${entry.time}</span>
+                            </div>
                         </div>
-                        <div class="flex gap-2">
+                        <div class="flex flex-wrap gap-3">
                             ${entry.stats.map(s => `
-                                <div class="flex flex-col items-center">
-                                    <span class="text-[8px] text-gray-400 uppercase leading-none">${s.name.split('-')[1]?.trim() || s.name}</span>
-                                    <span class="text-[10px] font-bold ${parseFloat(s.balance) < 95 ? 'text-red-500' : 'text-gray-600'} leading-tight">${s.balance}</span>
+                                <div class="flex flex-col items-center bg-white border border-slate-100 px-2 py-1 rounded-lg">
+                                    <span class="text-[7px] text-slate-400 font-black uppercase">${s.name.split('-')[1]?.trim() || s.name}</span>
+                                    <span class="text-[10px] font-black ${parseFloat(s.balance) < 95 ? 'text-red-500' : 'text-slate-600'}">${s.balance}</span>
                                 </div>
-                            `).join('<div class="w-px h-4 bg-gray-200 mt-2"></div>')}
+                            `).join('')}
                         </div>
                     </div>
                 </div>
             `).join('');
         }
 
-        function clearLog() {
-            shuffleHistory = [];
-            saveData();
-            renderLog();
-            showToast("Shuffle history cleared");
+        function exportToCSV() {
+            let csv = "Shift,Team ID,Team Name,Tech ID,Tech Name,Quality,Balance%\n";
+            
+            teams.forEach(team => {
+                const members = currentAssignments[team.id] || [];
+                const score = members.reduce((sum, m) => sum + m.quality, 0);
+                const shiftAvg = getShiftMetrics(team.shift).avg;
+                const ratio = shiftAvg > 0 ? (score / shiftAvg) * 100 : 100;
+                
+                members.forEach(m => {
+                    csv += `"${team.shift}","${team.id}","${team.name}","${m.id}","${m.name}",${m.quality},${ratio.toFixed(1)}%\n`;
+                });
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('hidden', '');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `Tech_Ops_Roster_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast("CSV Export Started");
         }
 
+        // Management Functions
         function addNewTech() {
-            const id = document.getElementById('new-tech-id').value.trim();
+            const id = document.getElementById('new-tech-id').value.trim().toUpperCase();
             const name = document.getElementById('new-tech-name').value.trim();
             const quality = parseInt(document.getElementById('new-tech-quality').value);
             const shift = document.getElementById('new-tech-shift').value;
 
-            if(!id || !name) return;
-            if(techs.some(t => t.id === id)) {
-                showToast("Tech ID already exists", "error");
-                return;
-            }
+            if(!id || !name) return showToast("ID and Name required", "error");
+            if(techs.some(t => t.id === id)) return showToast("ID already registered", "error");
 
-            techs.push({
-                id, name, quality: quality || 80, shift,
-                defaultTeam: teams.find(t => t.shift === shift)?.id || teams[0]?.id
-            });
+            const defaultTeam = teams.find(t => t.shift === shift)?.id || "";
+
+            techs.push({ id, name, quality: quality || 80, shift, defaultTeam });
             saveData();
             renderMemberList();
-            showToast(`Added ${name} to roster`);
+            showToast(`Registered ${name}`);
+            
             document.getElementById('new-tech-id').value = '';
             document.getElementById('new-tech-name').value = '';
         }
@@ -638,36 +745,33 @@
             const name = document.getElementById('new-team-name').value.trim();
             const shift = document.getElementById('new-team-shift').value;
 
-            if(!id || !name) return;
-            if(teams.some(t => t.id === id)) {
-                showToast("Team ID already exists", "error");
-                return;
-            }
+            if(!id || !name) return showToast("ID and Name required", "error");
+            if(teams.some(t => t.id === id)) return showToast("Team ID exists", "error");
 
             teams.push({ id, name, shift });
             currentAssignments[id] = [];
             saveData();
             renderTeamEditor();
-            showToast(`Created team: ${name}`);
+            showToast(`Unit ${name} created`);
+            
             document.getElementById('new-team-id').value = '';
             document.getElementById('new-team-name').value = '';
         }
 
         function removeTech(id) {
-            const t = techs.find(x => x.id === id);
             techs = techs.filter(x => x.id !== id);
             saveData();
             renderMemberList();
-            showToast(`Removed ${t.name} from roster`);
+            showToast("Staff record deleted");
         }
 
         function removeTeam(id) {
-            if(teams.length <= 1) return;
-            const t = teams.find(x => x.id === id);
+            if(teams.length <= 1) return showToast("Minimum 1 team required", "error");
             teams = teams.filter(x => x.id !== id);
+            cleanupOrphanedTechs();
             saveData();
             renderTeamEditor();
-            showToast(`Deleted team ${t.name}`);
+            showToast("Unit decommissioned");
         }
 
         function openModal(id) {
@@ -677,33 +781,35 @@
         }
 
         function closeModals() {
-            document.querySelectorAll('.modal-container').forEach(m => m.classList.add('hidden'));
+            document.querySelectorAll('[id$="-modal"]').forEach(m => m.classList.add('hidden'));
             saveData();
             renderGrid();
         }
-        
+
         function renderMemberList() {
             const list = document.getElementById('member-list');
+            document.getElementById('roster-count').textContent = `${techs.length} TOTAL REGISTERED`;
+            
             list.innerHTML = [...techs].sort((a,b) => a.name.localeCompare(b.name)).map((m) => `
-                <div class="flex items-center justify-between bg-white p-3 rounded-xl border hover:border-blue-400 transition-colors shadow-sm relative group">
-                    <div class="flex flex-col min-w-0 pr-8">
-                        <span class="font-bold text-sm truncate">${m.name}</span>
-                        <div class="flex items-center gap-2 mt-1">
-                            <span class="text-[9px] font-bold text-gray-500 uppercase">${m.id}</span>
-                            <select onchange="updateTechShift('${m.id}', this.value)" class="text-[9px] border rounded bg-gray-100 p-0.5 font-bold cursor-pointer">
-                                <option value="day" ${m.shift === 'day' ? 'selected' : ''}>Day</option>
-                                <option value="night" ${m.shift === 'night' ? 'selected' : ''}>Night</option>
+                <div class="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-100 hover:border-slate-300 transition-all shadow-sm">
+                    <div class="min-w-0 flex-1">
+                        <span class="block font-bold text-sm text-slate-800 truncate uppercase tracking-tight">${m.name}</span>
+                        <div class="flex items-center gap-3 mt-1.5">
+                            <span class="text-[9px] font-black text-slate-400 tracking-widest">${m.id}</span>
+                            <select onchange="updateTechShift('${m.id}', this.value)" class="text-[9px] font-black border-none bg-slate-100 rounded px-2 py-0.5 uppercase">
+                                <option value="day" ${m.shift === 'day' ? 'selected' : ''}>DAY</option>
+                                <option value="night" ${m.shift === 'night' ? 'selected' : ''}>NIGHT</option>
                             </select>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <div class="flex flex-col items-end">
-                             <label class="text-[8px] font-bold text-gray-400">QUALITY</label>
+                    <div class="flex items-center gap-4">
+                        <div class="text-right">
+                             <label class="text-[8px] font-black text-slate-300 uppercase block mb-1">Qual</label>
                              <input type="number" value="${m.quality}" onchange="updateTechQuality('${m.id}', this.value)"
-                               class="w-12 border rounded bg-gray-50 text-center text-xs font-bold p-1">
+                               class="w-12 border border-slate-100 rounded-lg text-center text-xs font-black p-1 bg-slate-50">
                         </div>
-                        <button onclick="removeTech('${m.id}')" class="text-gray-300 hover:text-red-500 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256"><path d="M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm96,168H64V64H192ZM112,104v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm48,0v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Z"></path></svg>
+                        <button onclick="removeTech('${m.id}')" class="text-slate-200 hover:text-red-500 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                         </button>
                     </div>
                 </div>
@@ -713,21 +819,21 @@
         function renderTeamEditor() {
             const list = document.getElementById('team-editor-list');
             list.innerHTML = teams.map(t => `
-                <div class="flex flex-wrap items-center gap-4 bg-white p-4 rounded-xl border mb-3 group">
+                <div class="flex flex-wrap items-center gap-6 bg-slate-50 p-5 rounded-2xl border border-slate-100 mb-4 transition-all hover:bg-slate-100/50">
                     <div class="flex-1 min-w-[200px]">
-                        <label class="text-[9px] font-bold text-gray-400 block mb-1 uppercase">Team Name</label>
-                        <input type="text" value="${t.name}" onchange="updateTeamName('${t.id}', this.value)" class="w-full border rounded p-2 text-sm font-medium">
+                        <label class="text-[9px] font-black text-slate-400 block mb-2 uppercase tracking-widest">Unit Designation</label>
+                        <input type="text" value="${t.name}" onchange="updateTeamName('${t.id}', this.value)" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm">
                     </div>
                     <div>
-                        <label class="text-[9px] font-bold text-gray-400 block mb-1 uppercase">Shift</label>
-                        <select onchange="updateTeamShift('${t.id}', this.value)" class="border rounded p-2 text-sm bg-gray-50">
-                            <option value="day" ${t.shift === 'day' ? 'selected' : ''}>Day</option>
-                            <option value="night" ${t.shift === 'night' ? 'selected' : ''}>Night</option>
+                        <label class="text-[9px] font-black text-slate-400 block mb-2 uppercase tracking-widest">Operational Shift</label>
+                        <select onchange="updateTeamShift('${t.id}', this.value)" class="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm">
+                            <option value="day" ${t.shift === 'day' ? 'selected' : ''}>Day Shift</option>
+                            <option value="night" ${t.shift === 'night' ? 'selected' : ''}>Night Shift</option>
                         </select>
                     </div>
-                    <div class="pt-5">
-                         <button onclick="removeTeam('${t.id}')" class="p-2 text-gray-200 hover:text-red-500 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256"><path d="M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm96,168H64V64H192ZM112,104v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm48,0v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Z"></path></svg>
+                    <div class="pt-6">
+                         <button onclick="removeTeam('${t.id}')" class="p-2 text-slate-300 hover:text-red-500 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" x2="9" y1="9" y2="15"/><line x1="9" x2="15" y1="9" y2="15"/></svg>
                         </button>
                     </div>
                 </div>
@@ -758,9 +864,18 @@
             saveData();
         }
 
+        function clearLog() {
+            shuffleHistory = [];
+            saveData();
+            renderLog();
+            showToast("Audit log wiped");
+        }
+
         function confirmFullReset() { document.getElementById('confirm-modal').classList.remove('hidden'); }
         function executeFullReset() { 
-            localStorage.clear(); 
+            localStorage.removeItem('tech_ops_v1_staff');
+            localStorage.removeItem('tech_ops_v1_teams');
+            localStorage.removeItem('tech_ops_v1_history');
             location.reload(); 
         }
 
