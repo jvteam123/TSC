@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tech Ops | Advanced Shuffler v1.0</title>
+    <title>Tech Ops | Advanced Shuffler v1.3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
@@ -27,7 +27,7 @@
 
         .team-card {
             border: 1px solid #000;
-            min-height: 540px;
+            min-height: 560px;
             background: white;
             display: flex;
             flex-direction: column;
@@ -50,7 +50,7 @@
 
         .shift-badge {
             font-size: 9px;
-            padding: 1px 6px;
+            padding: 2px 8px;
             border-radius: 99px;
             text-transform: uppercase;
             font-weight: 700;
@@ -75,11 +75,16 @@
             display: grid;
             grid-template-columns: 1fr 80px;
             border-bottom: 1px solid #f1f5f9;
-            font-size: 13px;
+            font-size: 12px;
+        }
+
+        .tech-row.pinned-tech {
+            background-color: #fffbeb;
+            border-left: 3px solid var(--brand-primary);
         }
 
         .tech-row:last-child { border-bottom: none; }
-        .tech-row:nth-child(even) { background-color: #f8fafc; }
+        .tech-row:nth-child(even):not(.pinned-tech) { background-color: #f8fafc; }
 
         .id-cell {
             border-left: 1px solid #f1f5f9;
@@ -95,19 +100,20 @@
             padding: 12px;
         }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        #toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 100;
+        }
 
         .toast {
             animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
 
         @keyframes slideIn {
-            from { transform: translateX(120%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+            from { transform: translateY(120%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
 
         .balance-indicator {
@@ -120,17 +126,15 @@
 </head>
 <body class="pb-20">
 
-    <!-- Toast Container -->
-    <div id="toast-container" class="fixed top-6 right-6 z-[100] flex flex-col gap-3"></div>
+    <div id="toast-container" class="flex flex-col gap-3"></div>
 
-    <!-- Sticky Navigation -->
     <nav class="glass-header sticky top-0 z-40 px-6 py-4">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 bg-black rounded-lg flex items-center justify-center text-white font-black text-xl">T</div>
                 <div>
                     <h1 class="font-extrabold text-lg leading-none tracking-tight">TECH OPS</h1>
-                    <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Resource Balancer v1.0</p>
+                    <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Dynamic Count Balancer v1.3</p>
                 </div>
             </div>
 
@@ -143,28 +147,27 @@
 
                 <div class="h-8 w-[1px] bg-slate-200 mx-1 hidden md:block"></div>
 
-                <button onclick="openModal('member-modal')" class="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm" title="Manage Staff">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <button onclick="openModal('member-modal')" class="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm flex items-center justify-center" title="Manage Staff">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 </button>
                 
-                <button onclick="openModal('team-modal')" class="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm" title="Manage Teams">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+                <button onclick="openModal('team-modal')" class="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm flex items-center justify-center" title="Manage Teams">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
                 </button>
 
-                <button onclick="exportToCSV()" class="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm" title="Export CSV">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                <button onclick="exportToCSV()" class="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm flex items-center justify-center" title="Export CSV">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                 </button>
 
                 <button onclick="shuffleBalanced()" class="bg-amber-500 hover:bg-amber-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-amber-200 flex items-center gap-2 transition-all active:scale-95">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
-                    RUN SHUFFLE
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                    RUN BALANCED SHUFFLE
                 </button>
             </div>
         </div>
     </nav>
 
     <main class="max-w-7xl mx-auto px-6 mt-8">
-        <!-- Day Section -->
         <section class="mb-12">
             <div class="flex items-center justify-between mb-6">
                 <h2 class="text-xs font-black uppercase tracking-[0.2em] text-slate-400 flex items-center gap-3">
@@ -175,7 +178,6 @@
             <div id="teams-container-day" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
         </section>
 
-        <!-- Night Section -->
         <section class="mb-12">
             <div class="flex items-center justify-between mb-6">
                 <h2 class="text-xs font-black uppercase tracking-[0.2em] text-slate-400 flex items-center gap-3">
@@ -186,7 +188,6 @@
             <div id="teams-container-night" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
         </section>
 
-        <!-- History Log -->
         <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
                 <h3 class="font-bold text-sm text-slate-700 flex items-center gap-2 uppercase tracking-tight">
@@ -199,31 +200,28 @@
                 <div class="p-12 text-center text-slate-300 italic text-sm">No activity recorded in current session.</div>
             </div>
         </section>
-
-        <div class="mt-16 pt-8 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
-            <p>© 2024 TECH OPS RESOURCE MANAGEMENT SYSTEM</p>
-            <div class="flex gap-6">
-                <button onclick="confirmFullReset()" class="hover:text-red-500 transition-colors">Factory Reset</button>
-                <span>BUILD 1.0.0-FINAL</span>
-            </div>
-        </div>
     </main>
 
-    <!-- Modal: Staff -->
     <div id="member-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-        <div class="bg-white rounded-3xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200">
+        <div class="bg-white rounded-3xl w-full max-w-6xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200">
             <div class="p-8 border-b flex justify-between items-center">
                 <div>
                     <h2 class="text-2xl font-black text-slate-800 tracking-tight">Roster Management</h2>
-                    <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Configure staff quality and shift availability</p>
+                    <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Configure staff quality, production, and shift availability</p>
                 </div>
-                <button onclick="closeModals()" class="w-12 h-12 flex items-center justify-center bg-slate-100 rounded-full hover:bg-slate-200 transition-all">&times;</button>
+                <div class="flex items-center gap-4">
+                    <button onclick="factoryReset()" class="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-200 transition-all flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                        Factory Reset
+                    </button>
+                    <button onclick="closeModals()" class="w-10 h-10 flex items-center justify-center bg-slate-100 rounded-full hover:bg-slate-200 transition-all font-bold text-xl">&times;</button>
+                </div>
             </div>
             
             <div class="flex flex-col lg:flex-row flex-1 overflow-hidden">
-                <div class="w-full lg:w-80 bg-slate-50 p-8 border-r border-slate-200">
+                <div class="w-full lg:w-80 bg-slate-50 p-8 border-r border-slate-200 overflow-y-auto">
                     <h3 class="font-black text-[10px] text-slate-400 mb-6 uppercase tracking-[0.2em]">Add New Resource</h3>
-                    <div class="space-y-5">
+                    <div class="space-y-4">
                         <div class="space-y-1">
                             <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Technician ID</label>
                             <input type="text" id="new-tech-id" placeholder="e.g. 1234AB" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 ring-amber-500 outline-none transition-all">
@@ -234,16 +232,20 @@
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div class="space-y-1">
-                                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Quality</label>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Quality %</label>
                                 <input type="number" id="new-tech-quality" value="80" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none transition-all">
                             </div>
                             <div class="space-y-1">
-                                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Shift</label>
-                                <select id="new-tech-shift" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none transition-all appearance-none">
-                                    <option value="day">Day</option>
-                                    <option value="night">Night</option>
-                                </select>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Production %</label>
+                                <input type="number" id="new-tech-prod" value="100" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none transition-all">
                             </div>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Shift</label>
+                            <select id="new-tech-shift" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none transition-all appearance-none">
+                                <option value="day">Day</option>
+                                <option value="night">Night</option>
+                            </select>
                         </div>
                         <button onclick="addNewTech()" class="w-full bg-slate-900 text-white py-4 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg hover:bg-black transition-all active:scale-95 mt-4">Register Tech</button>
                     </div>
@@ -260,7 +262,6 @@
         </div>
     </div>
 
-    <!-- Modal: Teams -->
     <div id="team-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
         <div class="bg-white rounded-3xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200">
             <div class="p-8 border-b flex justify-between items-center">
@@ -270,52 +271,25 @@
                 </div>
                 <button onclick="closeModals()" class="text-3xl text-slate-300 hover:text-slate-500 transition-colors">&times;</button>
             </div>
-            
             <div class="flex flex-col lg:flex-row flex-1 overflow-hidden">
                 <div class="w-full lg:w-80 bg-slate-50 p-8 border-r border-slate-200">
                     <h3 class="font-black text-[10px] text-slate-400 mb-6 uppercase tracking-[0.2em]">Define New Unit</h3>
                     <div class="space-y-5">
-                        <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Unit ID / Code</label>
-                            <input type="text" id="new-team-id" placeholder="e.g. 99" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none">
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Team Designation</label>
-                            <input type="text" id="new-team-name" placeholder="e.g. 99 - Alpha" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none">
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Shift Assignment</label>
-                            <select id="new-team-shift" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none">
-                                <option value="day">Day</option>
-                                <option value="night">Night</option>
-                            </select>
-                        </div>
-                        <button onclick="addNewTeam()" class="w-full bg-amber-500 text-white py-4 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg hover:bg-amber-600 transition-all active:scale-95 mt-4">Create Unit</button>
+                        <input type="text" id="new-team-id" placeholder="Unit ID (e.g. 99)" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none">
+                        <input type="text" id="new-team-name" placeholder="Designation (e.g. 99 - Alpha)" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none">
+                        <select id="new-team-shift" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none">
+                            <option value="day">Day</option>
+                            <option value="night">Night</option>
+                        </select>
+                        <button onclick="addNewTeam()" class="w-full bg-amber-500 text-white py-4 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg hover:bg-amber-600 transition-all active:scale-95">Create Unit</button>
                     </div>
                 </div>
-
                 <div class="flex-1 p-8 overflow-y-auto bg-white" id="team-editor-list"></div>
             </div>
         </div>
     </div>
 
-    <!-- Confirm Dialog -->
-    <div id="confirm-modal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center z-[100] p-4">
-        <div class="bg-white rounded-3xl w-full max-w-sm p-8 text-center border border-slate-200 shadow-2xl">
-            <div class="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-            </div>
-            <h3 class="text-2xl font-black text-slate-800 mb-2">Hard Reset?</h3>
-            <p class="text-slate-400 text-sm mb-8 font-medium">This will permanently delete all custom staff, teams, and audit history.</p>
-            <div class="flex gap-4">
-                <button onclick="closeModals()" class="flex-1 bg-slate-100 py-4 rounded-2xl font-bold text-slate-600 text-xs uppercase tracking-widest hover:bg-slate-200 transition-all">Cancel</button>
-                <button onclick="executeFullReset()" class="flex-1 bg-red-500 text-white py-4 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-red-600 shadow-lg shadow-red-100 transition-all">Confirm</button>
-            </div>
-        </div>
-    </div>
-
     <script>
-        // Data Structures
         const INITIAL_TEAMS = [
             { id: "63", name: "63 - Cherrie", shift: "day" },
             { id: "115", name: "115 - Barbie", shift: "day" },
@@ -326,76 +300,76 @@
         ];
 
         const INITIAL_TECHS = [
-            { id: '7092RN', name: 'Romiel Nuevo', defaultTeam: '63', shift: 'day', quality: 90 },
-            { id: '7089RR', name: 'Ravin Louis Relador', defaultTeam: '63', shift: 'day', quality: 85 },
-            { id: '7102JD', name: 'John Kenneth Dueñas', defaultTeam: '63', shift: 'day', quality: 85 },
-            { id: '7170WS', name: 'Warren Salogaol', defaultTeam: '63', shift: 'day', quality: 80 },
-            { id: '7040JP', name: 'Jose Poro III', defaultTeam: '63', shift: 'day', quality: 85 },
-            { id: '7159MC', name: 'Ma. Angelica Cagigas', defaultTeam: '63', shift: 'day', quality: 80 },
-            { id: '7161KA', name: 'Kent C. Agraviador', defaultTeam: '63', shift: 'day', quality: 80 },
-            { id: '7168JS', name: 'Jennifer S. Solayao', defaultTeam: '63', shift: 'day', quality: 80 },
-            { id: '7158JD', name: 'Junie S. Dadol', defaultTeam: '63', shift: 'day', quality: 80 },
-            { id: '7167AD', name: 'Almer B. Dela Cruz', defaultTeam: '63', shift: 'day', quality: 80 },
-            { id: '7178MD', name: 'Mary Mae Dagwayan', defaultTeam: '63', shift: 'day', quality: 80 },
-            { id: '4297RQ', name: 'Ralph B. Quinto', defaultTeam: '115', shift: 'day', quality: 90 },
-            { id: '7086LP', name: 'Lemuel Presbitero', defaultTeam: '115', shift: 'day', quality: 85 },
-            { id: '7087LA', name: 'Lorie Mae Año', defaultTeam: '115', shift: 'day', quality: 85 },
-            { id: '7088MA', name: 'Michelle Marie D. Alburo', defaultTeam: '115', shift: 'day', quality: 85 },
-            { id: '7099SS', name: 'Sallemie Solon', defaultTeam: '115', shift: 'day', quality: 80 },
-            { id: '7171AL', name: 'Alfe Marie G. Latras', defaultTeam: '115', shift: 'day', quality: 80 },
-            { id: '7311JT', name: 'Joseph M. Tabada', defaultTeam: '115', shift: 'day', quality: 80 },
-            { id: '7173ES', name: 'Earl Ryan Y. Santiago', defaultTeam: '115', shift: 'day', quality: 80 },
-            { id: '7175JP', name: 'Jumbo S. Paanod Jr.', defaultTeam: '115', shift: 'day', quality: 80 },
-            { id: '7084LQ', name: 'Lowel K. Quilinguen', defaultTeam: '115', shift: 'day', quality: 85 },
-            { id: '7044AM', name: 'Anna Mae Mencho A. Macaraya', defaultTeam: '115', shift: 'day', quality: 85 },
-            { id: '4488MD', name: 'Maricris de Gracia', defaultTeam: '57', shift: 'day', quality: 90 },
-            { id: '7096AV', name: 'Ale-June Villacencio', defaultTeam: '57', shift: 'day', quality: 85 },
-            { id: '4489EA', name: 'Everly Apurado', defaultTeam: '57', shift: 'day', quality: 85 },
-            { id: '7103RE', name: 'Roberto Ebarita Jr.', defaultTeam: '57', shift: 'day', quality: 80 },
-            { id: '7043RP', name: 'Randolf Potot', defaultTeam: '57', shift: 'day', quality: 85 },
-            { id: '7093MG', name: 'Michael Allien Getigan', defaultTeam: '57', shift: 'day', quality: 80 },
-            { id: '7166CR', name: 'Carl Anthony Riñen', defaultTeam: '57', shift: 'day', quality: 80 },
-            { id: '7090JA', name: 'John Russian Arches', defaultTeam: '57', shift: 'day', quality: 80 },
-            { id: '7165GR', name: 'Ghee Ram N. Racaza', defaultTeam: '57', shift: 'day', quality: 80 },
-            { id: '7176CC', name: 'Clarfen D. Campilanan', defaultTeam: '57', shift: 'day', quality: 80 },
-            { id: '7249SS', name: 'Serg Sembrano', defaultTeam: '123', shift: 'night', quality: 90 },
-            { id: '7236LE', name: 'Lorens Christopher Ebrado', defaultTeam: '123', shift: 'night', quality: 95 },
-            { id: '4426KV', name: 'Kenneth Lester Villajos', defaultTeam: '123', shift: 'night', quality: 85 },
-            { id: '4472JS', name: 'Sison, John Vincent Estopito', defaultTeam: '123', shift: 'night', quality: 85 },
-            { id: '4475JT', name: 'Joana May Taboada', defaultTeam: '123', shift: 'night', quality: 80 },
-            { id: '7240HH', name: 'Hyacint Hortelano', defaultTeam: '123', shift: 'night', quality: 80 },
-            { id: '7039NO', name: 'Nazareno Oppus', defaultTeam: '123', shift: 'night', quality: 85 },
-            { id: '7231NR', name: 'Negel Roloma', defaultTeam: '123', shift: 'night', quality: 80 },
-            { id: '7244AA', name: 'Arjohn Abapo', defaultTeam: '123', shift: 'night', quality: 80 },
-            { id: '7247JA', name: 'Jayson Aliser', defaultTeam: '123', shift: 'night', quality: 80 },
-            { id: '7248AA', name: 'Allan Paul Alforque', defaultTeam: '123', shift: 'night', quality: 80 },
-            { id: '7251JD', name: 'Jan Dominic Dela Cruz', defaultTeam: '123', shift: 'night', quality: 80 },
-            { id: '7314VP', name: 'Vince April Pitogo', defaultTeam: '123', shift: 'night', quality: 80 },
-            { id: '7042NB', name: 'Nikki Carlos Booc', defaultTeam: '114', shift: 'night', quality: 90 },
-            { id: '7234CS', name: 'Christian Suico', defaultTeam: '114', shift: 'night', quality: 85 },
-            { id: '7313MB', name: 'Mark Kg Barong', defaultTeam: '114', shift: 'night', quality: 85 },
-            { id: '7036RB', name: 'Rodrigo Basnillo', defaultTeam: '114', shift: 'night', quality: 85 },
-            { id: '4478JV', name: 'Jervin Villocino', defaultTeam: '114', shift: 'night', quality: 80 },
-            { id: '7239EO', name: 'Eric Jason Omega', defaultTeam: '114', shift: 'night', quality: 80 },
-            { id: '4477PT', name: 'Pacifico Tejam', defaultTeam: '114', shift: 'night', quality: 80 },
-            { id: '7251DJ', name: 'Jan Dominic Dela Cruz (A)', defaultTeam: '114', shift: 'night', quality: 80 },
-            { id: '7233JP', name: 'Jeobenail li Parame', defaultTeam: '114', shift: 'night', quality: 80 },
-            { id: '4135RC', name: 'Cantiveros, Ritche Bayo', defaultTeam: '114', shift: 'night', quality: 80 },
-            { id: '7315CR', name: 'Christiane Repunte', defaultTeam: '114', shift: 'night', quality: 80 },
-            { id: '7243JC', name: 'John Cañete', defaultTeam: '114', shift: 'night', quality: 85 },
-            { id: '4474HS', name: 'Soroño, Humfrey Dave Viaña', defaultTeam: '64', shift: 'night', quality: 90 },
-            { id: '4492CP', name: 'Christian Pontiano', defaultTeam: '64', shift: 'night', quality: 85 },
-            { id: '4421AT', name: 'Anthony Talledo', defaultTeam: '64', shift: 'night', quality: 85 },
-            { id: '7237ML', name: 'Michael Bryan Lambo', defaultTeam: '64', shift: 'night', quality: 85 },
-            { id: '4481JV', name: 'Jasmin Villocino', defaultTeam: '64', shift: 'night', quality: 80 },
-            { id: '7316NT', name: 'Niel Fred Tabar', defaultTeam: '64', shift: 'night', quality: 80 },
-            { id: '7245SC', name: 'Sergio Cuizon Jr.', defaultTeam: '64', shift: 'night', quality: 80 },
-            { id: '4476JR', name: 'Rico, Jefrey Labajo', defaultTeam: '64', shift: 'night', quality: 80 },
-            { id: '7246AJ', name: 'Arvin Jasmin', defaultTeam: '64', shift: 'night', quality: 80 },
-            { id: '7241DM', name: 'Dejie Monterde', defaultTeam: '64', shift: 'night', quality: 80 },
-            { id: '4435AC', name: 'Allan Codina', defaultTeam: '64', shift: 'night', quality: 80 },
-            { id: '7242FV', name: 'Francis Anthony Villarin', defaultTeam: '64', shift: 'night', quality: 80 },
-            { id: '2274JD', name: 'Jacky Dimla', defaultTeam: '64', shift: 'night', quality: 85 }
+            { id: '7092RN', name: 'Romiel Nuevo', defaultTeam: '63', shift: 'day', quality: 90, production: 100, pinned: false },
+            { id: '7089RR', name: 'Ravin Louis Relador', defaultTeam: '63', shift: 'day', quality: 85, production: 100, pinned: false },
+            { id: '7102JD', name: 'John Kenneth Dueñas', defaultTeam: '63', shift: 'day', quality: 85, production: 100, pinned: false },
+            { id: '7170WS', name: 'Warren Salogaol', defaultTeam: '63', shift: 'day', quality: 80, production: 100, pinned: false },
+            { id: '7040JP', name: 'Jose Poro III', defaultTeam: '63', shift: 'day', quality: 85, production: 100, pinned: false },
+            { id: '7159MC', name: 'Ma. Angelica Cagigas', defaultTeam: '63', shift: 'day', quality: 80, production: 100, pinned: false },
+            { id: '7161KA', name: 'Kent C. Agraviador', defaultTeam: '63', shift: 'day', quality: 80, production: 100, pinned: false },
+            { id: '7168JS', name: 'Jennifer S. Solayao', defaultTeam: '63', shift: 'day', quality: 80, production: 100, pinned: false },
+            { id: '7158JD', name: 'Junie S. Dadol', defaultTeam: '63', shift: 'day', quality: 80, production: 100, pinned: false },
+            { id: '7167AD', name: 'Almer B. Dela Cruz', defaultTeam: '63', shift: 'day', quality: 80, production: 100, pinned: false },
+            { id: '7178MD', name: 'Mary Mae Dagwayan', defaultTeam: '63', shift: 'day', quality: 80, production: 100, pinned: false },
+            { id: '4297RQ', name: 'Ralph B. Quinto', defaultTeam: '115', shift: 'day', quality: 90, production: 100, pinned: false },
+            { id: '7086LP', name: 'Lemuel Presbitero', defaultTeam: '115', shift: 'day', quality: 85, production: 100, pinned: false },
+            { id: '7087LA', name: 'Lorie Mae Año', defaultTeam: '115', shift: 'day', quality: 85, production: 100, pinned: false },
+            { id: '7088MA', name: 'Michelle Marie D. Alburo', defaultTeam: '115', shift: 'day', quality: 85, production: 100, pinned: false },
+            { id: '7099SS', name: 'Sallemie Solon', defaultTeam: '115', shift: 'day', quality: 80, production: 100, pinned: false },
+            { id: '7171AL', name: 'Alfe Marie G. Latras', defaultTeam: '115', shift: 'day', quality: 80, production: 100, pinned: false },
+            { id: '7311JT', name: 'Joseph M. Tabada', defaultTeam: '115', shift: 'day', quality: 80, production: 100, pinned: false },
+            { id: '7173ES', name: 'Earl Ryan Y. Santiago', defaultTeam: '115', shift: 'day', quality: 80, production: 100, pinned: false },
+            { id: '7175JP', name: 'Jumbo S. Paanod Jr.', defaultTeam: '115', shift: 'day', quality: 80, production: 100, pinned: false },
+            { id: '7084LQ', name: 'Lowel K. Quilinguen', defaultTeam: '115', shift: 'day', quality: 85, production: 100, pinned: false },
+            { id: '7044AM', name: 'Anna Mae Mencho A. Macaraya', defaultTeam: '115', shift: 'day', quality: 85, production: 100, pinned: false },
+            { id: '4488MD', name: 'Maricris de Gracia', defaultTeam: '57', shift: 'day', quality: 90, production: 100, pinned: false },
+            { id: '7096AV', name: 'Ale-June Villacencio', defaultTeam: '57', shift: 'day', quality: 85, production: 100, pinned: false },
+            { id: '4489EA', name: 'Everly Apurado', defaultTeam: '57', shift: 'day', quality: 85, production: 100, pinned: false },
+            { id: '7103RE', name: 'Roberto Ebarita Jr.', defaultTeam: '57', shift: 'day', quality: 80, production: 100, pinned: false },
+            { id: '7043RP', name: 'Randolf Potot', defaultTeam: '57', shift: 'day', quality: 85, production: 100, pinned: false },
+            { id: '7093MG', name: 'Michael Allien Getigan', defaultTeam: '57', shift: 'day', quality: 80, production: 100, pinned: false },
+            { id: '7166CR', name: 'Carl Anthony Riñen', defaultTeam: '57', shift: 'day', quality: 80, production: 100, pinned: false },
+            { id: '7090JA', name: 'John Russian Arches', defaultTeam: '57', shift: 'day', quality: 80, production: 100, pinned: false },
+            { id: '7165GR', name: 'Ghee Ram N. Racaza', defaultTeam: '57', shift: 'day', quality: 80, production: 100, pinned: false },
+            { id: '7176CC', name: 'Clarfen D. Campilanan', defaultTeam: '57', shift: 'day', quality: 80, production: 100, pinned: false },
+            { id: '7249SS', name: 'Serg Sembrano', defaultTeam: '123', shift: 'night', quality: 90, production: 100, pinned: false },
+            { id: '7236LE', name: 'Lorens Christopher Ebrado', defaultTeam: '123', shift: 'night', quality: 95, production: 100, pinned: false },
+            { id: '4426KV', name: 'Kenneth Lester Villajos', defaultTeam: '123', shift: 'night', quality: 85, production: 100, pinned: false },
+            { id: '4472JS', name: 'Sison, John Vincent Estopito', defaultTeam: '123', shift: 'night', quality: 85, production: 100, pinned: false },
+            { id: '4475JT', name: 'Joana May Taboada', defaultTeam: '123', shift: 'night', quality: 80, production: 100, pinned: false },
+            { id: '7240HH', name: 'Hyacint Hortelano', defaultTeam: '123', shift: 'night', quality: 80, production: 100, pinned: false },
+            { id: '7039NO', name: 'Nazareno Oppus', defaultTeam: '123', shift: 'night', quality: 85, production: 100, pinned: false },
+            { id: '7231NR', name: 'Negel Roloma', defaultTeam: '123', shift: 'night', quality: 80, production: 100, pinned: false },
+            { id: '7244AA', name: 'Arjohn Abapo', defaultTeam: '123', shift: 'night', quality: 80, production: 100, pinned: false },
+            { id: '7247JA', name: 'Jayson Aliser', defaultTeam: '123', shift: 'night', quality: 80, production: 100, pinned: false },
+            { id: '7248AA', name: 'Allan Paul Alforque', defaultTeam: '123', shift: 'night', quality: 80, production: 100, pinned: false },
+            { id: '7251JD', name: 'Jan Dominic Dela Cruz', defaultTeam: '123', shift: 'night', quality: 80, production: 100, pinned: false },
+            { id: '7314VP', name: 'Vince April Pitogo', defaultTeam: '123', shift: 'night', quality: 80, production: 100, pinned: false },
+            { id: '7042NB', name: 'Nikki Carlos Booc', defaultTeam: '114', shift: 'night', quality: 90, production: 100, pinned: false },
+            { id: '7234CS', name: 'Christian Suico', defaultTeam: '114', shift: 'night', quality: 85, production: 100, pinned: false },
+            { id: '7313MB', name: 'Mark Kg Barong', defaultTeam: '114', shift: 'night', quality: 85, production: 100, pinned: false },
+            { id: '7036RB', name: 'Rodrigo Basnillo', defaultTeam: '114', shift: 'night', quality: 85, production: 100, pinned: false },
+            { id: '4478JV', name: 'Jervin Villocino', defaultTeam: '114', shift: 'night', quality: 80, production: 100, pinned: false },
+            { id: '7239EO', name: 'Eric Jason Omega', defaultTeam: '114', shift: 'night', quality: 80, production: 100, pinned: false },
+            { id: '4477PT', name: 'Pacifico Tejam', defaultTeam: '114', shift: 'night', quality: 80, production: 100, pinned: false },
+            { id: '7251DJ', name: 'Jan Dominic Dela Cruz (A)', defaultTeam: '114', shift: 'night', quality: 80, production: 100, pinned: false },
+            { id: '7233JP', name: 'Jeobenail li Parame', defaultTeam: '114', shift: 'night', quality: 80, production: 100, pinned: false },
+            { id: '4135RC', name: 'Cantiveros, Ritche Bayo', defaultTeam: '114', shift: 'night', quality: 80, production: 100, pinned: false },
+            { id: '7315CR', name: 'Christiane Repunte', defaultTeam: '114', shift: 'night', quality: 80, production: 100, pinned: false },
+            { id: '7243JC', name: 'John Cañete', defaultTeam: '114', shift: 'night', quality: 85, production: 100, pinned: false },
+            { id: '4474HS', name: 'Soroño, Humfrey Dave Viaña', defaultTeam: '64', shift: 'night', quality: 90, production: 100, pinned: false },
+            { id: '4492CP', name: 'Christian Pontiano', defaultTeam: '64', shift: 'night', quality: 85, production: 100, pinned: false },
+            { id: '4421AT', name: 'Anthony Talledo', defaultTeam: '64', shift: 'night', quality: 85, production: 100, pinned: false },
+            { id: '7237ML', name: 'Michael Bryan Lambo', defaultTeam: '64', shift: 'night', quality: 85, production: 100, pinned: false },
+            { id: '4481JV', name: 'Jasmin Villocino', defaultTeam: '64', shift: 'night', quality: 80, production: 100, pinned: false },
+            { id: '7316NT', name: 'Niel Fred Tabar', defaultTeam: '64', shift: 'night', quality: 80, production: 100, pinned: false },
+            { id: '7245SC', name: 'Sergio Cuizon Jr.', defaultTeam: '64', shift: 'night', quality: 80, production: 100, pinned: false },
+            { id: '4476JR', name: 'Rico, Jefrey Labajo', defaultTeam: '64', shift: 'night', quality: 80, production: 100, pinned: false },
+            { id: '7246AJ', name: 'Arvin Jasmin', defaultTeam: '64', shift: 'night', quality: 80, production: 100, pinned: false },
+            { id: '7241DM', name: 'Dejie Monterde', defaultTeam: '64', shift: 'night', quality: 80, production: 100, pinned: false },
+            { id: '4435AC', name: 'Allan Codina', defaultTeam: '64', shift: 'night', quality: 80, production: 100, pinned: false },
+            { id: '7242FV', name: 'Francis Anthony Villarin', defaultTeam: '64', shift: 'night', quality: 80, production: 100, pinned: false },
+            { id: '2274JD', name: 'Jacky Dimla', defaultTeam: '64', shift: 'night', quality: 85, production: 100, pinned: false }
         ];
 
         let techs = [];
@@ -404,7 +378,6 @@
         let shuffleScope = 'all';
         let shuffleHistory = [];
 
-        // Application Logic
         function init() {
             const savedTechs = localStorage.getItem('tech_ops_v1_staff');
             const savedTeams = localStorage.getItem('tech_ops_v1_teams');
@@ -414,9 +387,12 @@
             teams = savedTeams ? JSON.parse(savedTeams) : [...INITIAL_TEAMS];
             shuffleHistory = savedHistory ? JSON.parse(savedHistory) : [];
             
-            // Clean up possible broken references (Bug fix: Orphaning)
+            techs.forEach(t => { 
+                if(t.production === undefined) t.production = 100;
+                if(t.pinned === undefined) t.pinned = false;
+            });
+
             cleanupOrphanedTechs();
-            
             resetToDefault();
             renderGrid();
             renderLog();
@@ -426,13 +402,18 @@
             const validTeamIds = teams.map(t => t.id);
             techs.forEach(tech => {
                 if (!validTeamIds.includes(tech.defaultTeam)) {
-                    // Reassign to the first available team of the same shift
                     const sameShiftTeam = teams.find(t => t.shift === tech.shift);
-                    if (sameShiftTeam) tech.defaultTeam = sameShiftTeam.id;
-                    else tech.defaultTeam = teams[0]?.id || "";
+                    tech.defaultTeam = sameShiftTeam ? sameShiftTeam.id : (teams[0]?.id || "");
                 }
             });
             saveData();
+        }
+
+        function factoryReset() {
+            if(confirm("DANGER: This will delete all custom members, teams, and pins. Revert to original setup?")) {
+                localStorage.clear();
+                window.location.reload();
+            }
         }
 
         function saveData() {
@@ -465,6 +446,22 @@
             });
         }
 
+        function togglePin(techId) {
+            const tech = techs.find(t => t.id === techId);
+            if(tech) {
+                tech.pinned = !tech.pinned;
+                for(const teamId in currentAssignments) {
+                    if(currentAssignments[teamId].some(m => m.id === techId)) {
+                        tech.defaultTeam = teamId;
+                        break;
+                    }
+                }
+                saveData();
+                renderGrid();
+                showToast(tech.pinned ? "Technician Pinned" : "Technician Unpinned");
+            }
+        }
+
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -480,46 +477,29 @@
             
             setTimeout(() => {
                 toast.style.opacity = '0';
-                toast.style.transform = 'translateX(20px)';
-                toast.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 1, 1)';
+                toast.style.transform = 'translateY(20px)';
+                toast.style.transition = 'all 0.4s ease';
                 setTimeout(() => toast.remove(), 400);
             }, 3500);
         }
 
         function shuffleBalanced() {
             const logDetails = [];
-            
-            // Safety check: Avoid logic errors if no teams exist
             if (teams.length === 0) return showToast("No teams configured", "error");
 
             if (shuffleScope === 'all' || shuffleScope === 'day') {
-                const dayTeams = teams.filter(t => t.shift === 'day');
-                const dayTechs = techs.filter(t => t.shift === 'day');
-                if (dayTeams.length > 0 && dayTechs.length > 0) {
-                    performShiftShuffle('day');
-                    logDetails.push('Day Shift');
-                } else if(shuffleScope === 'day') {
-                    return showToast("Incomplete Day Shift configuration", "error");
-                }
+                performShiftShuffle('day');
+                logDetails.push('Day');
             }
             if (shuffleScope === 'all' || shuffleScope === 'night') {
-                const nightTeams = teams.filter(t => t.shift === 'night');
-                const nightTechs = techs.filter(t => t.shift === 'night');
-                if (nightTeams.length > 0 && nightTechs.length > 0) {
-                    performShiftShuffle('night');
-                    logDetails.push('Night Shift');
-                } else if(shuffleScope === 'night') {
-                    return showToast("Incomplete Night Shift configuration", "error");
-                }
+                performShiftShuffle('night');
+                logDetails.push('Night');
             }
 
-            if (logDetails.length === 0) return showToast("Nothing to shuffle", "error");
-
-            // Build snapshot for log
             const snapshot = teams.map(team => {
                 const m = currentAssignments[team.id] || [];
-                const score = m.reduce((s, x) => s + x.quality, 0);
-                const shiftAvg = getShiftMetrics(team.shift).avg;
+                const score = m.reduce((s, x) => s + (x.quality * (x.production / 100)), 0);
+                const shiftAvg = getShiftMetrics(team.shift).powerAvg;
                 const ratio = shiftAvg > 0 ? (score / shiftAvg) * 100 : 100;
                 return { name: team.name, balance: ratio.toFixed(1) + '%' };
             });
@@ -531,47 +511,57 @@
                 stats: snapshot
             });
 
-            if(shuffleHistory.length > 30) shuffleHistory.pop();
-
             saveData();
             renderGrid();
             renderLog();
-            showToast(`Optimization complete for ${logDetails.join(' & ')}.`);
+            showToast(`Resource Counts Balanced Across Units.`);
         }
 
         function performShiftShuffle(shift) {
             const shiftTeams = teams.filter(t => t.shift === shift);
-            const shiftTechs = techs.filter(t => t.shift === shift).sort((a,b) => (b.quality - a.quality) || (Math.random() - 0.5));
+            const allShiftTechs = techs.filter(t => t.shift === shift);
             
-            const teamCaps = {};
-            const baseSize = Math.floor(shiftTechs.length / shiftTeams.length);
-            const remainder = shiftTechs.length % shiftTeams.length;
-            
-            shiftTeams.forEach((t, i) => {
-                teamCaps[t.id] = baseSize + (i < remainder ? 1 : 0);
-                currentAssignments[t.id] = [];
+            if (!shiftTeams.length || !allShiftTechs.length) return;
+
+            const assignments = {};
+            const teamPowerScores = {};
+            shiftTeams.forEach(t => {
+                assignments[t.id] = allShiftTechs.filter(tech => tech.pinned && tech.defaultTeam === t.id);
+                teamPowerScores[t.id] = assignments[t.id].reduce((sum, tech) => sum + (tech.quality * (tech.production / 100)), 0);
             });
 
-            const teamScores = {};
-            shiftTeams.forEach(t => teamScores[t.id] = 0);
+            const pool = allShiftTechs.filter(tech => !tech.pinned)
+                .sort((a,b) => ((b.quality * (b.production/100)) - (a.quality * (a.production/100))) || (Math.random() - 0.5));
 
-            shiftTechs.forEach(tech => {
-                const available = shiftTeams.filter(t => currentAssignments[t.id].length < teamCaps[t.id]);
-                if(available.length) {
-                    available.sort((a,b) => teamScores[a.id] - teamScores[b.id]);
-                    const bestTeam = available[0].id;
-                    currentAssignments[bestTeam].push(tech);
-                    teamScores[bestTeam] += tech.quality;
+            const totalNeeded = allShiftTechs.length;
+            const targetSize = Math.floor(totalNeeded / shiftTeams.length);
+            const remainder = totalNeeded % shiftTeams.length;
+            
+            const sortedTeamsForCapacity = [...shiftTeams].sort((a,b) => assignments[b.id].length - assignments[a.id].length);
+            const teamCaps = {};
+            sortedTeamsForCapacity.forEach((t, i) => {
+                teamCaps[t.id] = targetSize + (i < remainder ? 1 : 0);
+            });
+
+            pool.forEach(tech => {
+                const availableTeams = shiftTeams.filter(t => assignments[t.id].length < teamCaps[t.id]);
+                if(availableTeams.length) {
+                    availableTeams.sort((a,b) => teamPowerScores[a.id] - teamPowerScores[b.id]);
+                    const bestTeamId = availableTeams[0].id;
+                    assignments[bestTeamId].push(tech);
+                    teamPowerScores[bestTeamId] += (tech.quality * (tech.production / 100));
                 }
             });
+
+            shiftTeams.forEach(t => currentAssignments[t.id] = assignments[t.id]);
         }
 
         function getShiftMetrics(shift) {
             const shiftTeams = teams.filter(t => t.shift === shift);
             const shiftTechs = techs.filter(t => t.shift === shift);
-            const total = shiftTechs.reduce((a, b) => a + b.quality, 0);
+            const totalPower = shiftTechs.reduce((a, b) => a + (b.quality * (b.production / 100)), 0);
             return {
-                avg: total / (shiftTeams.length || 1),
+                powerAvg: totalPower / (shiftTeams.length || 1),
                 count: shiftTechs.length,
                 teamCount: shiftTeams.length
             };
@@ -590,9 +580,9 @@
 
             teams.forEach(team => {
                 const members = currentAssignments[team.id] || [];
-                const score = members.reduce((sum, m) => sum + m.quality, 0);
-                const shiftAvg = (team.shift === 'day' ? dayMetrics : nightMetrics).avg;
-                const ratio = shiftAvg > 0 ? (score / shiftAvg) * 100 : 100;
+                const powerSum = members.reduce((sum, m) => sum + (m.quality * (m.production / 100)), 0);
+                const shiftAvg = (team.shift === 'day' ? dayMetrics : nightMetrics).powerAvg;
+                const ratio = shiftAvg > 0 ? (powerSum / shiftAvg) * 100 : 100;
                 
                 const card = document.createElement('div');
                 card.className = 'team-card shadow-sm';
@@ -606,7 +596,7 @@
                     <div class="team-header">
                         <div class="p-3 border-r border-black flex flex-col justify-center min-w-0">
                             <span class="text-[8px] opacity-60 uppercase tracking-widest leading-none mb-1">Operational Unit</span>
-                            <span class="text-sm truncate leading-none uppercase">${team.name}</span>
+                            <span class="text-sm truncate leading-none uppercase font-bold">${team.name}</span>
                         </div>
                         <div class="flex flex-col items-center justify-center p-2">
                             <span class="shift-badge ${team.shift === 'day' ? 'shift-day' : 'shift-night'} mb-1">${team.shift}</span>
@@ -621,16 +611,21 @@
                 
                 members.forEach(m => {
                     html += `
-                        <div class="tech-row group hover:bg-slate-50 transition-colors">
+                        <div class="tech-row group hover:bg-slate-50 transition-colors ${m.pinned ? 'pinned-tech' : ''}">
                             <div class="px-3 py-2 text-slate-700 truncate font-semibold flex items-center justify-between">
-                                ${m.name}
-                                <span class="text-[8px] text-slate-300 group-hover:text-amber-500 font-black">Q:${m.quality}</span>
+                                <div class="flex items-center gap-2 overflow-hidden">
+                                    <button onclick="togglePin('${m.id}')" class="shrink-0 transition-all ${m.pinned ? 'text-amber-500' : 'text-slate-200 hover:text-amber-300'}" title="Toggle Pin">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4H17V2H7V4H8V12L6 14V16H11V22H13V16H18V14L16 12Z"/></svg>
+                                    </button>
+                                    <span class="truncate">${m.name}</span>
+                                    ${m.pinned ? '<span class="text-[7px] bg-amber-500 text-white px-1 rounded font-black shrink-0">PINNED</span>' : ''}
+                                </div>
+                                <span class="text-[8px] text-slate-400 group-hover:text-amber-500 font-black shrink-0">Q:${m.quality} P:${m.production}%</span>
                             </div>
                             <div class="id-cell px-2 py-2 text-[10px] flex items-center justify-center">${m.id}</div>
                         </div>`;
                 });
 
-                // Structural placeholders for visual consistency
                 const slots = 13;
                 for(let i=0; i < Math.max(0, slots - members.length); i++) {
                     html += `<div class="tech-row opacity-[0.03]"><div class="px-3 py-2">-</div><div class="id-cell">-</div></div>`;
@@ -639,7 +634,7 @@
                 html += `</div>
                     <div class="team-footer">
                         <div class="flex justify-between items-center mb-3">
-                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Efficiency Metrics</span>
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Power Balance</span>
                             <div class="flex items-center gap-1.5">
                                 <span class="balance-indicator ${balanceColor}"></span>
                                 <span class="text-[10px] font-black ${textColor}">${ratio.toFixed(1)}%</span>
@@ -647,12 +642,12 @@
                         </div>
                         <div class="flex justify-between items-end border-t border-slate-100 pt-3">
                              <div class="flex flex-col">
-                                <span class="text-[8px] text-slate-400 font-bold uppercase">Resource Count</span>
-                                <span class="text-xs font-black text-slate-800">${members.length} TECHS</span>
+                                <span class="text-[8px] text-slate-400 font-bold uppercase">Tech Count</span>
+                                <span class="text-xs font-black text-slate-800">${members.length}</span>
                              </div>
                              <div class="flex flex-col items-end">
-                                <span class="text-[8px] text-slate-400 font-bold uppercase">Quality Sum</span>
-                                <span class="text-xs font-black text-slate-800">${score} PTS</span>
+                                <span class="text-[8px] text-slate-400 font-bold uppercase">Team Power</span>
+                                <span class="text-xs font-black text-slate-800">${powerSum.toFixed(0)} pts</span>
                              </div>
                         </div>
                     </div>`;
@@ -666,25 +661,24 @@
         function renderLog() {
             const logEl = document.getElementById('shuffle-log');
             if(!shuffleHistory.length) {
-                logEl.innerHTML = `<div class="p-12 text-center text-slate-300 italic text-sm">No activity recorded in current session.</div>`;
+                logEl.innerHTML = `<div class="p-12 text-center text-slate-300 italic text-sm">No activity recorded.</div>`;
                 return;
             }
-
             logEl.innerHTML = shuffleHistory.map(entry => `
-                <div class="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors p-4">
+                <div class="border-b border-slate-100 p-4">
                     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div class="flex items-center gap-4">
-                            <div class="bg-slate-900 text-white px-2 py-1 rounded text-[9px] font-black tracking-widest">${entry.scope}</div>
+                            <div class="bg-slate-900 text-white px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest">${entry.scope}</div>
                             <div class="flex flex-col">
                                 <span class="text-xs font-bold text-slate-700">${entry.details} Optimization</span>
-                                <span class="text-[9px] text-slate-400 font-medium">${entry.time}</span>
+                                <span class="text-[9px] text-slate-400">${entry.time}</span>
                             </div>
                         </div>
-                        <div class="flex flex-wrap gap-3">
+                        <div class="flex flex-wrap gap-2">
                             ${entry.stats.map(s => `
-                                <div class="flex flex-col items-center bg-white border border-slate-100 px-2 py-1 rounded-lg">
-                                    <span class="text-[7px] text-slate-400 font-black uppercase">${s.name.split('-')[1]?.trim() || s.name}</span>
-                                    <span class="text-[10px] font-black ${parseFloat(s.balance) < 95 ? 'text-red-500' : 'text-slate-600'}">${s.balance}</span>
+                                <div class="bg-slate-50 border border-slate-100 px-2 py-1 rounded text-[9px] font-bold">
+                                    <span class="text-slate-400">${s.name.split('-')[1]?.trim() || s.name}:</span>
+                                    <span class="${parseFloat(s.balance) < 95 ? 'text-red-500' : 'text-slate-700'}">${s.balance}</span>
                                 </div>
                             `).join('')}
                         </div>
@@ -694,47 +688,37 @@
         }
 
         function exportToCSV() {
-            let csv = "Shift,Team ID,Team Name,Tech ID,Tech Name,Quality,Balance%\n";
-            
+            let csv = "Shift,Team ID,Team Name,Tech ID,Tech Name,Quality,Production,PowerScore,Pinned\n";
             teams.forEach(team => {
                 const members = currentAssignments[team.id] || [];
-                const score = members.reduce((sum, m) => sum + m.quality, 0);
-                const shiftAvg = getShiftMetrics(team.shift).avg;
-                const ratio = shiftAvg > 0 ? (score / shiftAvg) * 100 : 100;
-                
                 members.forEach(m => {
-                    csv += `"${team.shift}","${team.id}","${team.name}","${m.id}","${m.name}",${m.quality},${ratio.toFixed(1)}%\n`;
+                    csv += `"${team.shift}","${team.id}","${team.name}","${m.id}","${m.name}",${m.quality},${m.production},${(m.quality * (m.production/100)).toFixed(1)},${m.pinned ? 'YES' : 'NO'}\n`;
                 });
             });
-
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.setAttribute('hidden', '');
-            a.setAttribute('href', url);
-            a.setAttribute('download', `Tech_Ops_Roster_${new Date().toISOString().split('T')[0]}.csv`);
-            document.body.appendChild(a);
+            a.href = url;
+            a.download = `Tech_Ops_Balancing_${new Date().toISOString().split('T')[0]}.csv`;
             a.click();
-            document.body.removeChild(a);
-            showToast("CSV Export Started");
+            showToast("CSV Exported");
         }
 
-        // Management Functions
         function addNewTech() {
             const id = document.getElementById('new-tech-id').value.trim().toUpperCase();
             const name = document.getElementById('new-tech-name').value.trim();
-            const quality = parseInt(document.getElementById('new-tech-quality').value);
+            const quality = parseInt(document.getElementById('new-tech-quality').value) || 80;
+            const production = parseInt(document.getElementById('new-tech-prod').value) || 100;
             const shift = document.getElementById('new-tech-shift').value;
 
             if(!id || !name) return showToast("ID and Name required", "error");
-            if(techs.some(t => t.id === id)) return showToast("ID already registered", "error");
+            if(techs.some(t => t.id === id)) return showToast("ID exists", "error");
 
             const defaultTeam = teams.find(t => t.shift === shift)?.id || "";
-
-            techs.push({ id, name, quality: quality || 80, shift, defaultTeam });
+            techs.push({ id, name, quality, production, shift, defaultTeam, pinned: false });
             saveData();
             renderMemberList();
-            showToast(`Registered ${name}`);
+            showToast(`Tech Registered: ${name}`);
             
             document.getElementById('new-tech-id').value = '';
             document.getElementById('new-tech-name').value = '';
@@ -744,34 +728,27 @@
             const id = document.getElementById('new-team-id').value.trim();
             const name = document.getElementById('new-team-name').value.trim();
             const shift = document.getElementById('new-team-shift').value;
-
             if(!id || !name) return showToast("ID and Name required", "error");
-            if(teams.some(t => t.id === id)) return showToast("Team ID exists", "error");
-
             teams.push({ id, name, shift });
             currentAssignments[id] = [];
             saveData();
             renderTeamEditor();
-            showToast(`Unit ${name} created`);
-            
-            document.getElementById('new-team-id').value = '';
-            document.getElementById('new-team-name').value = '';
+            showToast(`Unit Created: ${name}`);
         }
 
         function removeTech(id) {
             techs = techs.filter(x => x.id !== id);
             saveData();
             renderMemberList();
-            showToast("Staff record deleted");
+            showToast("Staff Deleted");
         }
 
         function removeTeam(id) {
-            if(teams.length <= 1) return showToast("Minimum 1 team required", "error");
+            if(teams.length <= 1) return showToast("Cannot delete last team", "error");
             teams = teams.filter(x => x.id !== id);
             cleanupOrphanedTechs();
             saveData();
             renderTeamEditor();
-            showToast("Unit decommissioned");
         }
 
         function openModal(id) {
@@ -788,28 +765,29 @@
 
         function renderMemberList() {
             const list = document.getElementById('member-list');
-            document.getElementById('roster-count').textContent = `${techs.length} TOTAL REGISTERED`;
-            
+            document.getElementById('roster-count').textContent = `${techs.length} TOTAL`;
             list.innerHTML = [...techs].sort((a,b) => a.name.localeCompare(b.name)).map((m) => `
-                <div class="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-100 hover:border-slate-300 transition-all shadow-sm">
-                    <div class="min-w-0 flex-1">
-                        <span class="block font-bold text-sm text-slate-800 truncate uppercase tracking-tight">${m.name}</span>
-                        <div class="flex items-center gap-3 mt-1.5">
-                            <span class="text-[9px] font-black text-slate-400 tracking-widest">${m.id}</span>
-                            <select onchange="updateTechShift('${m.id}', this.value)" class="text-[9px] font-black border-none bg-slate-100 rounded px-2 py-0.5 uppercase">
-                                <option value="day" ${m.shift === 'day' ? 'selected' : ''}>DAY</option>
-                                <option value="night" ${m.shift === 'night' ? 'selected' : ''}>NIGHT</option>
-                            </select>
+                <div class="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
+                    <div class="flex-1">
+                        <span class="block font-bold text-sm uppercase">${m.name}</span>
+                        <div class="flex gap-2 text-[9px] font-black text-slate-400 mt-1 uppercase">
+                            <span>ID: ${m.id}</span>
+                            <span>|</span>
+                            <span class="text-amber-500">${m.shift}</span>
+                            ${m.pinned ? '<span class="text-amber-600 font-bold ml-2">● PINNED</span>' : ''}
                         </div>
                     </div>
-                    <div class="flex items-center gap-4">
-                        <div class="text-right">
-                             <label class="text-[8px] font-black text-slate-300 uppercase block mb-1">Qual</label>
-                             <input type="number" value="${m.quality}" onchange="updateTechQuality('${m.id}', this.value)"
-                               class="w-12 border border-slate-100 rounded-lg text-center text-xs font-black p-1 bg-slate-50">
+                    <div class="flex items-center gap-2">
+                        <div class="text-center">
+                            <label class="text-[7px] font-black text-slate-300 block uppercase">Qual</label>
+                            <input type="number" value="${m.quality}" onchange="updateTechQuality('${m.id}', this.value)" class="w-10 border border-slate-100 rounded text-xs font-bold text-center">
                         </div>
-                        <button onclick="removeTech('${m.id}')" class="text-slate-200 hover:text-red-500 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                        <div class="text-center">
+                            <label class="text-[7px] font-black text-slate-300 block uppercase">Prod</label>
+                            <input type="number" value="${m.production}" onchange="updateTechProd('${m.id}', this.value)" class="w-10 border border-slate-100 rounded text-xs font-bold text-center">
+                        </div>
+                        <button onclick="removeTech('${m.id}')" class="text-slate-200 hover:text-red-500 ml-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                         </button>
                     </div>
                 </div>
@@ -819,65 +797,24 @@
         function renderTeamEditor() {
             const list = document.getElementById('team-editor-list');
             list.innerHTML = teams.map(t => `
-                <div class="flex flex-wrap items-center gap-6 bg-slate-50 p-5 rounded-2xl border border-slate-100 mb-4 transition-all hover:bg-slate-100/50">
-                    <div class="flex-1 min-w-[200px]">
-                        <label class="text-[9px] font-black text-slate-400 block mb-2 uppercase tracking-widest">Unit Designation</label>
-                        <input type="text" value="${t.name}" onchange="updateTeamName('${t.id}', this.value)" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm">
-                    </div>
-                    <div>
-                        <label class="text-[9px] font-black text-slate-400 block mb-2 uppercase tracking-widest">Operational Shift</label>
-                        <select onchange="updateTeamShift('${t.id}', this.value)" class="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm">
-                            <option value="day" ${t.shift === 'day' ? 'selected' : ''}>Day Shift</option>
-                            <option value="night" ${t.shift === 'night' ? 'selected' : ''}>Night Shift</option>
-                        </select>
-                    </div>
-                    <div class="pt-6">
-                         <button onclick="removeTeam('${t.id}')" class="p-2 text-slate-300 hover:text-red-500 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" x2="9" y1="9" y2="15"/><line x1="9" x2="15" y1="9" y2="15"/></svg>
-                        </button>
-                    </div>
+                <div class="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl mb-2">
+                    <input type="text" value="${t.name}" onchange="updateTeamName('${t.id}', this.value)" class="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold">
+                    <select onchange="updateTeamShift('${t.id}', this.value)" class="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold">
+                        <option value="day" ${t.shift === 'day' ? 'selected' : ''}>Day</option>
+                        <option value="night" ${t.shift === 'night' ? 'selected' : ''}>Night</option>
+                    </select>
+                    <button onclick="removeTeam('${t.id}')" class="text-slate-300 hover:text-red-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                    </button>
                 </div>
             `).join('');
         }
 
-        function updateTechQuality(id, val) {
-            const tech = techs.find(t => t.id === id);
-            if(tech) tech.quality = parseInt(val) || 80;
-            saveData();
-        }
-
-        function updateTechShift(id, val) {
-            const tech = techs.find(t => t.id === id);
-            if(tech) tech.shift = val;
-            saveData();
-        }
-
-        function updateTeamName(id, val) {
-            const team = teams.find(t => t.id === id);
-            if(team) team.name = val;
-            saveData();
-        }
-
-        function updateTeamShift(id, val) {
-            const team = teams.find(t => t.id === id);
-            if(team) team.shift = val;
-            saveData();
-        }
-
-        function clearLog() {
-            shuffleHistory = [];
-            saveData();
-            renderLog();
-            showToast("Audit log wiped");
-        }
-
-        function confirmFullReset() { document.getElementById('confirm-modal').classList.remove('hidden'); }
-        function executeFullReset() { 
-            localStorage.removeItem('tech_ops_v1_staff');
-            localStorage.removeItem('tech_ops_v1_teams');
-            localStorage.removeItem('tech_ops_v1_history');
-            location.reload(); 
-        }
+        function updateTechQuality(id, val) { const t = techs.find(x => x.id === id); if(t) t.quality = parseInt(val) || 0; saveData(); }
+        function updateTechProd(id, val) { const t = techs.find(x => x.id === id); if(t) t.production = parseInt(val) || 0; saveData(); }
+        function updateTeamName(id, val) { const t = teams.find(x => x.id === id); if(t) t.name = val; saveData(); }
+        function updateTeamShift(id, val) { const t = teams.find(x => x.id === id); if(t) t.shift = val; saveData(); }
+        function clearLog() { shuffleHistory = []; saveData(); renderLog(); }
 
         window.onload = init;
     </script>
