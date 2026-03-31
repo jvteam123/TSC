@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tech Ops | Advanced Shuffler v1.3</title>
+    <title>Tech Ops | Advanced Shuffler v1.4</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
@@ -27,7 +27,7 @@
 
         .team-card {
             border: 1px solid #000;
-            min-height: 560px;
+            min-height: 580px;
             background: white;
             display: flex;
             flex-direction: column;
@@ -134,7 +134,7 @@
                 <div class="w-10 h-10 bg-black rounded-lg flex items-center justify-center text-white font-black text-xl">T</div>
                 <div>
                     <h1 class="font-extrabold text-lg leading-none tracking-tight">TECH OPS</h1>
-                    <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Dynamic Count Balancer v1.3</p>
+                    <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Final Stable v1.4</p>
                 </div>
             </div>
 
@@ -153,10 +153,6 @@
                 
                 <button onclick="openModal('team-modal')" class="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm flex items-center justify-center" title="Manage Teams">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
-                </button>
-
-                <button onclick="exportToCSV()" class="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm flex items-center justify-center" title="Export CSV">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                 </button>
 
                 <button onclick="shuffleBalanced()" class="bg-amber-500 hover:bg-amber-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-amber-200 flex items-center gap-2 transition-all active:scale-95">
@@ -196,9 +192,7 @@
                 </h3>
                 <button onclick="clearLog()" class="text-[10px] font-bold text-slate-400 hover:text-red-500 transition-colors uppercase tracking-widest">Wipe Audit Data</button>
             </div>
-            <div id="shuffle-log" class="max-h-72 overflow-y-auto">
-                <div class="p-12 text-center text-slate-300 italic text-sm">No activity recorded in current session.</div>
-            </div>
+            <div id="shuffle-log" class="max-h-72 overflow-y-auto"></div>
         </section>
     </main>
 
@@ -222,35 +216,19 @@
                 <div class="w-full lg:w-80 bg-slate-50 p-8 border-r border-slate-200 overflow-y-auto">
                     <h3 class="font-black text-[10px] text-slate-400 mb-6 uppercase tracking-[0.2em]">Add New Resource</h3>
                     <div class="space-y-4">
-                        <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Technician ID</label>
-                            <input type="text" id="new-tech-id" placeholder="e.g. 1234AB" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 ring-amber-500 outline-none transition-all">
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Full Name</label>
-                            <input type="text" id="new-tech-name" placeholder="John Doe" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 ring-amber-500 outline-none transition-all">
-                        </div>
+                        <input type="text" id="new-tech-id" placeholder="Technician ID" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 ring-amber-500 outline-none transition-all">
+                        <input type="text" id="new-tech-name" placeholder="Full Name" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 ring-amber-500 outline-none transition-all">
                         <div class="grid grid-cols-2 gap-4">
-                            <div class="space-y-1">
-                                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Quality %</label>
-                                <input type="number" id="new-tech-quality" value="80" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none transition-all">
-                            </div>
-                            <div class="space-y-1">
-                                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Production %</label>
-                                <input type="number" id="new-tech-prod" value="100" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none transition-all">
-                            </div>
+                            <input type="number" id="new-tech-quality" value="80" placeholder="Quality %" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none">
+                            <input type="number" id="new-tech-prod" value="100" placeholder="Prod %" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none">
                         </div>
-                        <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Shift</label>
-                            <select id="new-tech-shift" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none transition-all appearance-none">
-                                <option value="day">Day</option>
-                                <option value="night">Night</option>
-                            </select>
-                        </div>
-                        <button onclick="addNewTech()" class="w-full bg-slate-900 text-white py-4 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg hover:bg-black transition-all active:scale-95 mt-4">Register Tech</button>
+                        <select id="new-tech-shift" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none">
+                            <option value="day">Day Shift</option>
+                            <option value="night">Night Shift</option>
+                        </select>
+                        <button onclick="addNewTech()" class="w-full bg-slate-900 text-white py-4 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg hover:bg-black transition-all">Register Tech</button>
                     </div>
                 </div>
-
                 <div class="flex-1 p-8 overflow-y-auto">
                     <div class="flex items-center justify-between mb-6">
                         <h3 class="font-black text-[10px] text-slate-400 uppercase tracking-[0.2em]">Active Roster</h3>
@@ -290,6 +268,7 @@
     </div>
 
     <script>
+        // DATA INITIALIZATION
         const INITIAL_TEAMS = [
             { id: "63", name: "63 - Cherrie", shift: "day" },
             { id: "115", name: "115 - Barbie", shift: "day" },
@@ -387,39 +366,98 @@
             teams = savedTeams ? JSON.parse(savedTeams) : [...INITIAL_TEAMS];
             shuffleHistory = savedHistory ? JSON.parse(savedHistory) : [];
             
-            techs.forEach(t => { 
-                if(t.production === undefined) t.production = 100;
-                if(t.pinned === undefined) t.pinned = false;
-            });
-
-            cleanupOrphanedTechs();
             resetToDefault();
             renderGrid();
             renderLog();
         }
 
-        function cleanupOrphanedTechs() {
-            const validTeamIds = teams.map(t => t.id);
-            techs.forEach(tech => {
-                if (!validTeamIds.includes(tech.defaultTeam)) {
-                    const sameShiftTeam = teams.find(t => t.shift === tech.shift);
-                    tech.defaultTeam = sameShiftTeam ? sameShiftTeam.id : (teams[0]?.id || "");
+        // CORE LOGIC: BALANCED SHUFFLE
+        function shuffleBalanced() {
+            if (teams.length === 0) return showToast("No teams found", "error");
+            
+            const logDetails = [];
+            if (shuffleScope === 'all' || shuffleScope === 'day') {
+                performShiftShuffle('day');
+                logDetails.push('Day');
+            }
+            if (shuffleScope === 'all' || shuffleScope === 'night') {
+                performShiftShuffle('night');
+                logDetails.push('Night');
+            }
+
+            // Snapshot for log
+            const snapshot = teams.map(team => {
+                const m = currentAssignments[team.id] || [];
+                const power = m.reduce((s, x) => s + (x.quality * (x.production / 100)), 0);
+                const shiftAvg = getShiftMetrics(team.shift).powerAvg;
+                const ratio = shiftAvg > 0 ? (power / shiftAvg) * 100 : 100;
+                return { name: team.name, balance: ratio.toFixed(1) + '%' };
+            });
+
+            shuffleHistory.unshift({
+                time: new Date().toLocaleTimeString(),
+                scope: shuffleScope.toUpperCase(),
+                details: logDetails.join(' & '),
+                stats: snapshot
+            });
+
+            saveData();
+            renderGrid();
+            renderLog();
+            showToast("Resource Counts Balanced Successfully");
+        }
+
+        function performShiftShuffle(shift) {
+            const shiftTeams = teams.filter(t => t.shift === shift);
+            const allShiftTechs = techs.filter(t => t.shift === shift);
+            if (!shiftTeams.length || !allShiftTechs.length) return;
+
+            const assignments = {};
+            const teamPowerScores = {};
+            
+            // 1. Assign Pinned first
+            shiftTeams.forEach(t => {
+                assignments[t.id] = allShiftTechs.filter(tech => tech.pinned && tech.defaultTeam === t.id);
+                teamPowerScores[t.id] = assignments[t.id].reduce((sum, tech) => sum + (tech.quality * (tech.production / 100)), 0);
+            });
+
+            // 2. Pool remaining
+            const pool = allShiftTechs.filter(tech => !tech.pinned)
+                .sort((a,b) => ((b.quality * (b.production/100)) - (a.quality * (a.production/100))) || (Math.random() - 0.5));
+
+            // 3. Define Team Headcount Capacity (Strict Balance)
+            const targetSize = Math.floor(allShiftTechs.length / shiftTeams.length);
+            const remainder = allShiftTechs.length % shiftTeams.length;
+            const teamCaps = {};
+            
+            shiftTeams.forEach((t, i) => {
+                teamCaps[t.id] = targetSize + (i < remainder ? 1 : 0);
+            });
+
+            // 4. Distribute pool to teams with capacity, prioritizing lower power
+            pool.forEach(tech => {
+                const availableTeams = shiftTeams.filter(t => assignments[t.id].length < teamCaps[t.id]);
+                if(availableTeams.length) {
+                    availableTeams.sort((a,b) => teamPowerScores[a.id] - teamPowerScores[b.id]);
+                    const bestTeamId = availableTeams[0].id;
+                    assignments[bestTeamId].push(tech);
+                    teamPowerScores[bestTeamId] += (tech.quality * (tech.production / 100));
                 }
             });
-            saveData();
+
+            shiftTeams.forEach(t => currentAssignments[t.id] = assignments[t.id]);
         }
 
-        function factoryReset() {
-            if(confirm("DANGER: This will delete all custom members, teams, and pins. Revert to original setup?")) {
-                localStorage.clear();
-                window.location.reload();
-            }
-        }
-
-        function saveData() {
-            localStorage.setItem('tech_ops_v1_staff', JSON.stringify(techs));
-            localStorage.setItem('tech_ops_v1_teams', JSON.stringify(teams));
-            localStorage.setItem('tech_ops_v1_history', JSON.stringify(shuffleHistory));
+        // HELPERS
+        function getShiftMetrics(shift) {
+            const shiftTeams = teams.filter(t => t.shift === shift);
+            const shiftTechs = techs.filter(t => t.shift === shift);
+            const totalPower = shiftTechs.reduce((a, b) => a + (b.quality * (b.production / 100)), 0);
+            return {
+                powerAvg: totalPower / (shiftTeams.length || 1),
+                count: shiftTechs.length,
+                teamCount: shiftTeams.length
+            };
         }
 
         function resetToDefault() {
@@ -428,20 +466,10 @@
             techs.forEach(tech => {
                 if(currentAssignments[tech.defaultTeam]) {
                     currentAssignments[tech.defaultTeam].push(tech);
-                }
-            });
-        }
-
-        function setShuffleScope(scope) {
-            shuffleScope = scope;
-            ['all', 'day', 'night'].forEach(s => {
-                const btn = document.getElementById(`scope-${s}`);
-                if (s === scope) {
-                    btn.classList.add('bg-white', 'shadow-sm', 'text-slate-900');
-                    btn.classList.remove('text-slate-500');
                 } else {
-                    btn.classList.remove('bg-white', 'shadow-sm', 'text-slate-900');
-                    btn.classList.add('text-slate-500');
+                    // Fallback for orphaned techs
+                    const fallback = teams.find(t => t.shift === tech.shift);
+                    if(fallback) currentAssignments[fallback.id].push(tech);
                 }
             });
         }
@@ -458,115 +486,24 @@
                 }
                 saveData();
                 renderGrid();
-                showToast(tech.pinned ? "Technician Pinned" : "Technician Unpinned");
+                showToast(tech.pinned ? "Resource Pinned to Unit" : "Resource Unpinned");
             }
         }
 
-        function showToast(message, type = 'success') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = `toast px-5 py-4 rounded-2xl shadow-2xl border-l-4 text-sm font-bold flex items-center gap-3 bg-white 
-                ${type === 'success' ? 'border-green-500 text-slate-800' : 'border-red-500 text-slate-800'}`;
-            
-            const icon = type === 'success' ? 
-                '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#10b981" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm45.66,85.66-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32Z"></path></svg>' : 
-                '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#ef4444" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm37.66,130.34a8,8,0,0,1-11.32,11.32L128,139.31l-26.34,26.35a8,8,0,0,1-11.32-11.32L116.69,128,90.34,101.66a8,8,0,0,1,11.32-11.32L128,116.69l26.34-26.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>';
-            
-            toast.innerHTML = `${icon} <span>${message}</span>`;
-            container.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateY(20px)';
-                toast.style.transition = 'all 0.4s ease';
-                setTimeout(() => toast.remove(), 400);
-            }, 3500);
-        }
-
-        function shuffleBalanced() {
-            const logDetails = [];
-            if (teams.length === 0) return showToast("No teams configured", "error");
-
-            if (shuffleScope === 'all' || shuffleScope === 'day') {
-                performShiftShuffle('day');
-                logDetails.push('Day');
+        function factoryReset() {
+            if(confirm("DANGER: Wiping all custom configurations. Reverting to original staff list. Proceed?")) {
+                localStorage.clear();
+                window.location.reload();
             }
-            if (shuffleScope === 'all' || shuffleScope === 'night') {
-                performShiftShuffle('night');
-                logDetails.push('Night');
-            }
-
-            const snapshot = teams.map(team => {
-                const m = currentAssignments[team.id] || [];
-                const score = m.reduce((s, x) => s + (x.quality * (x.production / 100)), 0);
-                const shiftAvg = getShiftMetrics(team.shift).powerAvg;
-                const ratio = shiftAvg > 0 ? (score / shiftAvg) * 100 : 100;
-                return { name: team.name, balance: ratio.toFixed(1) + '%' };
-            });
-
-            shuffleHistory.unshift({
-                time: new Date().toLocaleString(),
-                scope: shuffleScope.toUpperCase(),
-                details: logDetails.join(' & '),
-                stats: snapshot
-            });
-
-            saveData();
-            renderGrid();
-            renderLog();
-            showToast(`Resource Counts Balanced Across Units.`);
         }
 
-        function performShiftShuffle(shift) {
-            const shiftTeams = teams.filter(t => t.shift === shift);
-            const allShiftTechs = techs.filter(t => t.shift === shift);
-            
-            if (!shiftTeams.length || !allShiftTechs.length) return;
-
-            const assignments = {};
-            const teamPowerScores = {};
-            shiftTeams.forEach(t => {
-                assignments[t.id] = allShiftTechs.filter(tech => tech.pinned && tech.defaultTeam === t.id);
-                teamPowerScores[t.id] = assignments[t.id].reduce((sum, tech) => sum + (tech.quality * (tech.production / 100)), 0);
-            });
-
-            const pool = allShiftTechs.filter(tech => !tech.pinned)
-                .sort((a,b) => ((b.quality * (b.production/100)) - (a.quality * (a.production/100))) || (Math.random() - 0.5));
-
-            const totalNeeded = allShiftTechs.length;
-            const targetSize = Math.floor(totalNeeded / shiftTeams.length);
-            const remainder = totalNeeded % shiftTeams.length;
-            
-            const sortedTeamsForCapacity = [...shiftTeams].sort((a,b) => assignments[b.id].length - assignments[a.id].length);
-            const teamCaps = {};
-            sortedTeamsForCapacity.forEach((t, i) => {
-                teamCaps[t.id] = targetSize + (i < remainder ? 1 : 0);
-            });
-
-            pool.forEach(tech => {
-                const availableTeams = shiftTeams.filter(t => assignments[t.id].length < teamCaps[t.id]);
-                if(availableTeams.length) {
-                    availableTeams.sort((a,b) => teamPowerScores[a.id] - teamPowerScores[b.id]);
-                    const bestTeamId = availableTeams[0].id;
-                    assignments[bestTeamId].push(tech);
-                    teamPowerScores[bestTeamId] += (tech.quality * (tech.production / 100));
-                }
-            });
-
-            shiftTeams.forEach(t => currentAssignments[t.id] = assignments[t.id]);
+        function saveData() {
+            localStorage.setItem('tech_ops_v1_staff', JSON.stringify(techs));
+            localStorage.setItem('tech_ops_v1_teams', JSON.stringify(teams));
+            localStorage.setItem('tech_ops_v1_history', JSON.stringify(shuffleHistory));
         }
 
-        function getShiftMetrics(shift) {
-            const shiftTeams = teams.filter(t => t.shift === shift);
-            const shiftTechs = techs.filter(t => t.shift === shift);
-            const totalPower = shiftTechs.reduce((a, b) => a + (b.quality * (b.production / 100)), 0);
-            return {
-                powerAvg: totalPower / (shiftTeams.length || 1),
-                count: shiftTechs.length,
-                teamCount: shiftTeams.length
-            };
-        }
-
+        // UI RENDERING
         function renderGrid() {
             const dayCont = document.getElementById('teams-container-day');
             const nightCont = document.getElementById('teams-container-night');
@@ -584,57 +521,43 @@
                 const shiftAvg = (team.shift === 'day' ? dayMetrics : nightMetrics).powerAvg;
                 const ratio = shiftAvg > 0 ? (powerSum / shiftAvg) * 100 : 100;
                 
-                const card = document.createElement('div');
-                card.className = 'team-card shadow-sm';
-                
                 let balanceColor = 'bg-slate-300';
                 let textColor = 'text-slate-800';
                 if(ratio < 95) { balanceColor = 'bg-red-500'; textColor = 'text-red-600'; }
                 if(ratio > 105) { balanceColor = 'bg-green-500'; textColor = 'text-green-600'; }
 
-                let html = `
+                const card = document.createElement('div');
+                card.className = 'team-card shadow-sm';
+                card.innerHTML = `
                     <div class="team-header">
-                        <div class="p-3 border-r border-black flex flex-col justify-center min-w-0">
-                            <span class="text-[8px] opacity-60 uppercase tracking-widest leading-none mb-1">Operational Unit</span>
-                            <span class="text-sm truncate leading-none uppercase font-bold">${team.name}</span>
+                        <div class="p-3 border-r border-black flex flex-col justify-center">
+                            <span class="text-sm truncate uppercase font-bold">${team.name}</span>
                         </div>
                         <div class="flex flex-col items-center justify-center p-2">
                             <span class="shift-badge ${team.shift === 'day' ? 'shift-day' : 'shift-night'} mb-1">${team.shift}</span>
-                            <span class="text-[9px] font-black opacity-50 tracking-tighter">ID:${team.id}</span>
+                            <span class="text-[9px] font-black opacity-50">ID:${team.id}</span>
                         </div>
                     </div>
                     <div class="sub-header">
-                        <div class="px-3 py-1.5">MEMBER DESIGNATION</div>
-                        <div class="flex items-center justify-center border-l border-white/10">AUTH_ID</div>
+                        <div class="px-3 py-1.5">MEMBER</div>
+                        <div class="text-center border-l border-white/10">TECH ID</div>
                     </div>
-                    <div class="bg-white flex-1 overflow-hidden">`;
-                
-                members.forEach(m => {
-                    html += `
-                        <div class="tech-row group hover:bg-slate-50 transition-colors ${m.pinned ? 'pinned-tech' : ''}">
-                            <div class="px-3 py-2 text-slate-700 truncate font-semibold flex items-center justify-between">
-                                <div class="flex items-center gap-2 overflow-hidden">
-                                    <button onclick="togglePin('${m.id}')" class="shrink-0 transition-all ${m.pinned ? 'text-amber-500' : 'text-slate-200 hover:text-amber-300'}" title="Toggle Pin">
+                    <div class="bg-white flex-1 overflow-hidden">
+                        ${members.map(m => `
+                            <div class="tech-row ${m.pinned ? 'pinned-tech' : ''}">
+                                <div class="px-3 py-2 text-slate-700 truncate font-semibold flex items-center gap-2">
+                                    <button onclick="togglePin('${m.id}')" class="${m.pinned ? 'text-amber-500' : 'text-slate-200 hover:text-amber-300'}">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4H17V2H7V4H8V12L6 14V16H11V22H13V16H18V14L16 12Z"/></svg>
                                     </button>
                                     <span class="truncate">${m.name}</span>
-                                    ${m.pinned ? '<span class="text-[7px] bg-amber-500 text-white px-1 rounded font-black shrink-0">PINNED</span>' : ''}
                                 </div>
-                                <span class="text-[8px] text-slate-400 group-hover:text-amber-500 font-black shrink-0">Q:${m.quality} P:${m.production}%</span>
+                                <div class="id-cell px-2 py-2 text-[10px] flex items-center justify-center">${m.id}</div>
                             </div>
-                            <div class="id-cell px-2 py-2 text-[10px] flex items-center justify-center">${m.id}</div>
-                        </div>`;
-                });
-
-                const slots = 13;
-                for(let i=0; i < Math.max(0, slots - members.length); i++) {
-                    html += `<div class="tech-row opacity-[0.03]"><div class="px-3 py-2">-</div><div class="id-cell">-</div></div>`;
-                }
-
-                html += `</div>
+                        `).join('')}
+                    </div>
                     <div class="team-footer">
                         <div class="flex justify-between items-center mb-3">
-                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Power Balance</span>
+                            <span class="text-[10px] font-black text-slate-400 uppercase">Power Balance</span>
                             <div class="flex items-center gap-1.5">
                                 <span class="balance-indicator ${balanceColor}"></span>
                                 <span class="text-[10px] font-black ${textColor}">${ratio.toFixed(1)}%</span>
@@ -642,16 +565,15 @@
                         </div>
                         <div class="flex justify-between items-end border-t border-slate-100 pt-3">
                              <div class="flex flex-col">
-                                <span class="text-[8px] text-slate-400 font-bold uppercase">Tech Count</span>
-                                <span class="text-xs font-black text-slate-800">${members.length}</span>
+                                <span class="text-[8px] text-slate-400 font-bold uppercase">Resource Count</span>
+                                <span class="text-xs font-black text-slate-800">${members.length} Techs</span>
                              </div>
                              <div class="flex flex-col items-end">
-                                <span class="text-[8px] text-slate-400 font-bold uppercase">Team Power</span>
+                                <span class="text-[8px] text-slate-400 font-bold uppercase">Unit Power</span>
                                 <span class="text-xs font-black text-slate-800">${powerSum.toFixed(0)} pts</span>
                              </div>
                         </div>
                     </div>`;
-                card.innerHTML = html;
                 
                 if(team.shift === 'day') dayCont.appendChild(card);
                 else nightCont.appendChild(card);
@@ -661,14 +583,14 @@
         function renderLog() {
             const logEl = document.getElementById('shuffle-log');
             if(!shuffleHistory.length) {
-                logEl.innerHTML = `<div class="p-12 text-center text-slate-300 italic text-sm">No activity recorded.</div>`;
+                logEl.innerHTML = `<div class="p-12 text-center text-slate-300 italic text-sm">No recent shuffle data.</div>`;
                 return;
             }
             logEl.innerHTML = shuffleHistory.map(entry => `
                 <div class="border-b border-slate-100 p-4">
                     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div class="flex items-center gap-4">
-                            <div class="bg-slate-900 text-white px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest">${entry.scope}</div>
+                            <div class="bg-slate-900 text-white px-2 py-1 rounded text-[9px] font-black uppercase">${entry.scope}</div>
                             <div class="flex flex-col">
                                 <span class="text-xs font-bold text-slate-700">${entry.details} Optimization</span>
                                 <span class="text-[9px] text-slate-400">${entry.time}</span>
@@ -687,70 +609,7 @@
             `).join('');
         }
 
-        function exportToCSV() {
-            let csv = "Shift,Team ID,Team Name,Tech ID,Tech Name,Quality,Production,PowerScore,Pinned\n";
-            teams.forEach(team => {
-                const members = currentAssignments[team.id] || [];
-                members.forEach(m => {
-                    csv += `"${team.shift}","${team.id}","${team.name}","${m.id}","${m.name}",${m.quality},${m.production},${(m.quality * (m.production/100)).toFixed(1)},${m.pinned ? 'YES' : 'NO'}\n`;
-                });
-            });
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Tech_Ops_Balancing_${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
-            showToast("CSV Exported");
-        }
-
-        function addNewTech() {
-            const id = document.getElementById('new-tech-id').value.trim().toUpperCase();
-            const name = document.getElementById('new-tech-name').value.trim();
-            const quality = parseInt(document.getElementById('new-tech-quality').value) || 80;
-            const production = parseInt(document.getElementById('new-tech-prod').value) || 100;
-            const shift = document.getElementById('new-tech-shift').value;
-
-            if(!id || !name) return showToast("ID and Name required", "error");
-            if(techs.some(t => t.id === id)) return showToast("ID exists", "error");
-
-            const defaultTeam = teams.find(t => t.shift === shift)?.id || "";
-            techs.push({ id, name, quality, production, shift, defaultTeam, pinned: false });
-            saveData();
-            renderMemberList();
-            showToast(`Tech Registered: ${name}`);
-            
-            document.getElementById('new-tech-id').value = '';
-            document.getElementById('new-tech-name').value = '';
-        }
-
-        function addNewTeam() {
-            const id = document.getElementById('new-team-id').value.trim();
-            const name = document.getElementById('new-team-name').value.trim();
-            const shift = document.getElementById('new-team-shift').value;
-            if(!id || !name) return showToast("ID and Name required", "error");
-            teams.push({ id, name, shift });
-            currentAssignments[id] = [];
-            saveData();
-            renderTeamEditor();
-            showToast(`Unit Created: ${name}`);
-        }
-
-        function removeTech(id) {
-            techs = techs.filter(x => x.id !== id);
-            saveData();
-            renderMemberList();
-            showToast("Staff Deleted");
-        }
-
-        function removeTeam(id) {
-            if(teams.length <= 1) return showToast("Cannot delete last team", "error");
-            teams = teams.filter(x => x.id !== id);
-            cleanupOrphanedTechs();
-            saveData();
-            renderTeamEditor();
-        }
-
+        // MODAL HANDLERS
         function openModal(id) {
             document.getElementById(id).classList.remove('hidden');
             if(id === 'member-modal') renderMemberList();
@@ -765,26 +624,16 @@
 
         function renderMemberList() {
             const list = document.getElementById('member-list');
-            document.getElementById('roster-count').textContent = `${techs.length} TOTAL`;
-            list.innerHTML = [...techs].sort((a,b) => a.name.localeCompare(b.name)).map((m) => `
+            document.getElementById('roster-count').textContent = `${techs.length} TOTAL STAFF`;
+            list.innerHTML = [...techs].sort((a,b) => a.name.localeCompare(b.name)).map(m => `
                 <div class="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
-                    <div class="flex-1">
+                    <div>
                         <span class="block font-bold text-sm uppercase">${m.name}</span>
-                        <div class="flex gap-2 text-[9px] font-black text-slate-400 mt-1 uppercase">
-                            <span>ID: ${m.id}</span>
-                            <span>|</span>
-                            <span class="text-amber-500">${m.shift}</span>
-                            ${m.pinned ? '<span class="text-amber-600 font-bold ml-2">● PINNED</span>' : ''}
-                        </div>
+                        <span class="text-[9px] font-black text-slate-400 uppercase">ID: ${m.id} | ${m.shift}</span>
                     </div>
                     <div class="flex items-center gap-2">
                         <div class="text-center">
-                            <label class="text-[7px] font-black text-slate-300 block uppercase">Qual</label>
-                            <input type="number" value="${m.quality}" onchange="updateTechQuality('${m.id}', this.value)" class="w-10 border border-slate-100 rounded text-xs font-bold text-center">
-                        </div>
-                        <div class="text-center">
-                            <label class="text-[7px] font-black text-slate-300 block uppercase">Prod</label>
-                            <input type="number" value="${m.production}" onchange="updateTechProd('${m.id}', this.value)" class="w-10 border border-slate-100 rounded text-xs font-bold text-center">
+                            <input type="number" value="${m.quality}" onchange="updateTechProp('${m.id}', 'quality', this.value)" class="w-10 border border-slate-100 rounded text-xs font-bold text-center">
                         </div>
                         <button onclick="removeTech('${m.id}')" class="text-slate-200 hover:text-red-500 ml-2">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
@@ -798,8 +647,8 @@
             const list = document.getElementById('team-editor-list');
             list.innerHTML = teams.map(t => `
                 <div class="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl mb-2">
-                    <input type="text" value="${t.name}" onchange="updateTeamName('${t.id}', this.value)" class="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold">
-                    <select onchange="updateTeamShift('${t.id}', this.value)" class="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold">
+                    <input type="text" value="${t.name}" onchange="updateTeamProp('${t.id}', 'name', this.value)" class="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold">
+                    <select onchange="updateTeamProp('${t.id}', 'shift', this.value)" class="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold">
                         <option value="day" ${t.shift === 'day' ? 'selected' : ''}>Day</option>
                         <option value="night" ${t.shift === 'night' ? 'selected' : ''}>Night</option>
                     </select>
@@ -810,10 +659,29 @@
             `).join('');
         }
 
-        function updateTechQuality(id, val) { const t = techs.find(x => x.id === id); if(t) t.quality = parseInt(val) || 0; saveData(); }
-        function updateTechProd(id, val) { const t = techs.find(x => x.id === id); if(t) t.production = parseInt(val) || 0; saveData(); }
-        function updateTeamName(id, val) { const t = teams.find(x => x.id === id); if(t) t.name = val; saveData(); }
-        function updateTeamShift(id, val) { const t = teams.find(x => x.id === id); if(t) t.shift = val; saveData(); }
+        // TOAST SYSTEM
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast px-5 py-4 rounded-2xl shadow-2xl border-l-4 text-sm font-bold bg-white ${type === 'success' ? 'border-green-500' : 'border-red-500'}`;
+            toast.textContent = msg;
+            container.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 500); }, 3000);
+        }
+
+        // DATA UPDATERS
+        function updateTechProp(id, prop, val) { const t = techs.find(x => x.id === id); if(t) { t[prop] = prop === 'name' ? val : (prop === 'shift' ? val : parseInt(val)); saveData(); } }
+        function updateTeamProp(id, prop, val) { const t = teams.find(x => x.id === id); if(t) { t[prop] = val; saveData(); } }
+        function setShuffleScope(s) { shuffleScope = s; ['all','day','night'].forEach(x => document.getElementById(`scope-${x}`).classList.toggle('bg-white', x === s)); }
+        function addNewTech() { 
+            const id = document.getElementById('new-tech-id').value.trim().toUpperCase();
+            const name = document.getElementById('new-tech-name').value.trim();
+            if(!id || !name) return;
+            techs.push({ id, name, quality: 80, production: 100, shift: document.getElementById('new-tech-shift').value, pinned: false });
+            saveData(); renderMemberList(); showToast("Tech Registered");
+        }
+        function removeTech(id) { techs = techs.filter(x => x.id !== id); saveData(); renderMemberList(); }
+        function removeTeam(id) { if(teams.length > 1) { teams = teams.filter(x => x.id !== id); saveData(); renderTeamEditor(); } }
         function clearLog() { shuffleHistory = []; saveData(); renderLog(); }
 
         window.onload = init;
