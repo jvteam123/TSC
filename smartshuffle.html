@@ -15,10 +15,11 @@
 
         .team-card {
             border: 1px solid #000;
-            min-height: 400px;
+            min-height: 520px;
             background: white;
             display: flex;
             flex-direction: column;
+            transition: transform 0.2s ease;
         }
 
         .team-header {
@@ -45,59 +46,48 @@
             text-transform: uppercase;
             font-size: 0.7rem;
             display: grid;
-            grid-template-columns: 1fr 60px 80px;
+            grid-template-columns: 1fr 80px;
         }
 
         .tech-row {
             display: grid;
-            grid-template-columns: 1fr 60px 80px;
+            grid-template-columns: 1fr 80px;
             border-bottom: 1px solid #e5e7eb;
             font-size: 0.85rem;
         }
 
-        .tech-row:nth-child(even) {
-            background-color: #fafafa;
-        }
-
-        .quality-cell {
-            border-left: 1px solid #e5e7eb;
-            text-align: center;
-            font-weight: 600;
-        }
+        .tech-row:nth-child(even) { background-color: #fafafa; }
 
         .id-cell {
             border-left: 1px solid #e5e7eb;
             text-align: center;
+            font-family: monospace;
         }
 
         .team-footer {
             margin-top: auto;
             border-top: 1px solid #000;
             background: #f9fafb;
-            padding: 4px 8px;
+            padding: 8px;
             font-size: 0.75rem;
             display: flex;
-            justify-content: space-between;
-            font-weight: bold;
+            flex-direction: column;
+            gap: 4px;
         }
 
-        .btn {
-            transition: all 0.2s;
-        }
-
-        .btn:active {
-            transform: scale(0.95);
-        }
+        .btn { transition: all 0.2s; cursor: pointer; }
+        .btn:active { transform: scale(0.95); }
+        .modal-container { backdrop-filter: blur(4px); }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body class="p-4 md:p-8 pb-24">
 
     <div class="max-w-7xl mx-auto">
-        <!-- Header Actions -->
+        <!-- Header -->
         <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 gap-6 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
             <div>
                 <h1 class="text-2xl font-bold text-gray-800">Tech Operations Shuffler</h1>
-                <p class="text-gray-500">Shift-Isolated Quality Balancing</p>
+                <p class="text-gray-500 text-sm">Balanced Shuffling & Quality Metrics</p>
             </div>
             
             <div class="flex flex-wrap items-center gap-3 w-full xl:w-auto">
@@ -107,171 +97,261 @@
                     <button onclick="setShuffleScope('night')" id="scope-night" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors text-gray-500 hover:text-gray-700">Night Only</button>
                 </div>
 
-                <div class="h-8 w-px bg-gray-200 mx-1 hidden md:block"></div>
-
-                <button onclick="openMemberModal()" class="btn bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
-                    Manage Techs
-                </button>
-                <button onclick="openTeamModal()" class="btn bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
-                    Setup Teams
-                </button>
+                <div class="flex gap-2">
+                    <button onclick="openModal('team-modal')" class="btn bg-gray-800 hover:bg-black text-white px-4 py-2 rounded-lg font-medium text-sm">Manage Teams</button>
+                    <button onclick="openModal('member-modal')" class="btn bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium text-sm">Manage Techs</button>
+                </div>
+                
                 <button onclick="shuffleBalanced()" class="btn bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-orange-200">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
                     SHUFFLE SELECTED
                 </button>
             </div>
         </div>
 
-        <!-- Shift Groupings -->
-        <div id="day-section" class="mb-10">
-            <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-orange-600">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
-                Day Shift (Shift 1)
+        <!-- Shift 1 / Day -->
+        <div class="mb-10">
+            <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-orange-600 uppercase tracking-wider">
+                <span class="w-2 h-6 bg-orange-500 rounded-full"></span> Day Shift
             </h2>
             <div id="teams-container-day" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
         </div>
 
-        <div id="night-section">
-            <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-indigo-600">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-                Night Shift (Shift 2)
+        <!-- Shift 2 / Night -->
+        <div>
+            <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-indigo-600 uppercase tracking-wider">
+                <span class="w-2 h-6 bg-indigo-500 rounded-full"></span> Night Shift
             </h2>
             <div id="teams-container-night" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
         </div>
+        
+        <div class="mt-12 pt-8 border-t border-gray-200 flex justify-between items-center px-4">
+            <p class="text-gray-400 text-xs italic">Data persistent in local storage</p>
+            <button onclick="confirmFullReset()" class="text-gray-400 hover:text-red-600 flex items-center gap-2 text-sm transition-colors p-2 rounded hover:bg-red-50">Reset to Defaults</button>
+        </div>
     </div>
 
-    <!-- Tech Management Modal -->
-    <div id="member-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl">
-            <div class="p-6 border-b flex justify-between items-center">
+    <!-- Modal: Manage Techs -->
+    <div id="member-modal" class="hidden fixed inset-0 bg-black/60 modal-container flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-6 bg-gray-50 border-b flex justify-between items-center">
                 <div>
-                    <h2 class="text-xl font-bold">Manage Technicians</h2>
-                    <p class="text-xs text-gray-500" id="tech-count-display"></p>
+                    <h2 class="text-xl font-bold text-gray-800">Technician Management</h2>
+                    <p class="text-xs text-gray-500">Update staff IDs, Quality, and Shift assignments</p>
                 </div>
-                <button onclick="closeModals()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+                <button onclick="closeModals()" class="w-10 h-10 flex items-center justify-center bg-gray-200 rounded-full text-xl hover:bg-gray-300 transition-colors">&times;</button>
             </div>
-            <div class="p-6 flex-1 overflow-y-auto">
-                <div class="flex flex-wrap gap-2 mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
-                    <input type="text" id="new-name" placeholder="Name" class="flex-1 min-w-[150px] border p-2 rounded">
-                    <input type="text" id="new-id" placeholder="ID" class="w-24 border p-2 rounded">
-                    <div class="flex items-center gap-2 bg-white px-2 rounded border">
-                        <span class="text-xs text-gray-400">Quality:</span>
-                        <input type="number" id="new-quality" placeholder="90" min="0" max="100" class="w-16 p-1 text-center font-bold">
-                        <span class="text-xs">%</span>
+            
+            <div class="flex flex-col lg:flex-row flex-1 overflow-hidden">
+                <!-- Add Tech Form -->
+                <div class="w-full lg:w-72 bg-gray-50 p-6 border-r border-gray-200">
+                    <h3 class="font-bold text-sm text-gray-700 mb-4 uppercase tracking-wider">Add New Tech</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-400 block mb-1">Tech ID</label>
+                            <input type="text" id="new-tech-id" placeholder="e.g. 7092RN" class="w-full border rounded p-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-400 block mb-1">Full Name</label>
+                            <input type="text" id="new-tech-name" class="w-full border rounded p-2 text-sm">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-[10px] font-bold text-gray-400 block mb-1">Quality</label>
+                                <input type="number" id="new-tech-quality" value="80" min="1" max="100" class="w-full border rounded p-2 text-sm">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-gray-400 block mb-1">Shift</label>
+                                <select id="new-tech-shift" class="w-full border rounded p-2 text-sm">
+                                    <option value="day">Day</option>
+                                    <option value="night">Night</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button onclick="addNewTech()" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold text-sm shadow-md hover:bg-blue-700 transition-colors mt-2">Create Tech</button>
                     </div>
-                    <button onclick="addMember()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-bold">Add Tech</button>
                 </div>
-                <div id="member-list" class="space-y-2"></div>
+
+                <!-- Tech List -->
+                <div class="flex-1 p-6 overflow-y-auto">
+                    <h3 class="font-bold text-sm text-gray-700 mb-4 uppercase tracking-wider">Current Roster</h3>
+                    <div id="member-list" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                </div>
             </div>
-            <div class="p-4 border-t flex justify-between items-center">
-                <button onclick="resetToDefault()" class="text-red-500 text-sm font-medium hover:underline">Reset to Default</button>
-                <button onclick="closeModals()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded font-medium">Close</button>
+
+            <div class="p-4 bg-gray-50 border-t flex justify-end gap-3">
+                <button onclick="closeModals()" class="bg-gray-800 text-white px-8 py-2 rounded-lg font-bold">Save & Close</button>
             </div>
         </div>
     </div>
 
-    <!-- Team Setup Modal -->
-    <div id="team-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-xl w-full max-w-md shadow-2xl">
-            <div class="p-6 border-b flex justify-between items-center">
-                <h2 class="text-xl font-bold">Team Setup</h2>
-                <button onclick="closeModals()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+    <!-- Modal: Manage Teams -->
+    <div id="team-modal" class="hidden fixed inset-0 bg-black/60 modal-container flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-6 bg-gray-50 border-b flex justify-between items-center">
+                <h2 class="text-xl font-bold text-gray-800">Manage Teams</h2>
+                <button onclick="closeModals()" class="text-2xl text-gray-400">&times;</button>
             </div>
-            <div class="p-6">
-                <div class="space-y-3 mb-6">
-                    <input type="text" id="team-name" placeholder="Team Name (e.g. 63 - Cherrie)" class="w-full border p-2 rounded">
-                    <div class="flex gap-2">
-                        <select id="team-shift" class="flex-1 border p-2 rounded text-sm bg-gray-50">
-                            <option value="day">Day Shift</option>
-                            <option value="night">Night Shift</option>
-                        </select>
-                        <button onclick="addTeam()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-bold">Add Team</button>
+            
+            <div class="flex flex-col lg:flex-row flex-1 overflow-hidden">
+                <!-- Add Team Form -->
+                <div class="w-full lg:w-72 bg-gray-50 p-6 border-r border-gray-200">
+                    <h3 class="font-bold text-sm text-gray-700 mb-4 uppercase tracking-wider">Add New Team</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-400 block mb-1">Team ID</label>
+                            <input type="text" id="new-team-id" placeholder="e.g. 99" class="w-full border rounded p-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-400 block mb-1">Team/Lead Name</label>
+                            <input type="text" id="new-team-name" placeholder="e.g. 99 - Smith" class="w-full border rounded p-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-400 block mb-1">Shift</label>
+                            <select id="new-team-shift" class="w-full border rounded p-2 text-sm">
+                                <option value="day">Day</option>
+                                <option value="night">Night</option>
+                            </select>
+                        </div>
+                        <button onclick="addNewTeam()" class="w-full bg-green-600 text-white py-2 rounded-lg font-bold text-sm shadow-md hover:bg-green-700 transition-colors mt-2">Create Team</button>
                     </div>
                 </div>
-                <div id="team-list" class="space-y-2 max-h-60 overflow-y-auto mb-4"></div>
+
+                <div class="flex-1 p-6 overflow-y-auto" id="team-editor-list"></div>
             </div>
-            <div class="p-4 border-t text-right">
-                <button onclick="closeModals()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded font-medium">Close</button>
+
+            <div class="p-4 bg-gray-50 border-t flex justify-end">
+                <button onclick="closeModals()" class="bg-gray-800 text-white px-8 py-2 rounded-lg font-bold">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Reset -->
+    <div id="confirm-modal" class="hidden fixed inset-0 bg-black/80 modal-container flex items-center justify-center z-[70] p-4">
+        <div class="bg-white rounded-xl w-full max-w-sm p-6 text-center">
+            <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M160,56H96V40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8ZM216,64H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V80h8a8,8,0,0,0,0-16ZM192,208H64V80H192Z"></path></svg>
+            </div>
+            <h3 class="text-xl font-bold mb-2">Reset All Data?</h3>
+            <p class="text-gray-500 text-sm mb-6">This will restore original staff and team settings.</p>
+            <div class="flex gap-3">
+                <button onclick="closeModals()" class="flex-1 bg-gray-100 py-2 rounded-lg font-medium">Cancel</button>
+                <button onclick="executeFullReset()" class="flex-1 bg-red-600 text-white py-2 rounded-lg font-medium">Reset Now</button>
             </div>
         </div>
     </div>
 
     <script>
-        const getRandomQuality = () => Math.floor(Math.random() * (100 - 80) + 80);
-
-        const DEFAULT_TECHS = [
-            { id: '7092RN', name: 'Romiel Nuevo' }, { id: '7089RR', name: 'Ravin Louis Relador' },
-            { id: '7102JD', name: 'John Kenneth Dueñas' }, { id: '7170WS', name: 'Warren Salogaol' },
-            { id: '7040JP', name: 'Jose Poro III' }, { id: '7159MC', name: 'Ma. Angelica Cagigas' },
-            { id: '7161KA', name: 'Kent C. Agraviador' }, { id: '7168JS', name: 'Jennifer S. Solayao' },
-            { id: '7158JD', name: 'Junie S. Dadol' }, { id: '7167AD', name: 'Almer B. Dela Cruz' },
-            { id: '7178MD', name: 'Mary Mae Dagwayan' }, { id: '4297RQ', name: 'Ralph B. Quinto' },
-            { id: '7086LP', name: 'Lemuel Presbitero' }, { id: '7087LA', name: 'Lorie Mae Año' },
-            { id: '7088MA', name: 'Michelle Marie D. Alburo' }, { id: '7099SS', name: 'Sallemie Solon' },
-            { id: '7171AL', name: 'Alfe Marie G. Latras' }, { id: '7311JT', name: 'Joseph M. Tabada' },
-            { id: '7173ES', name: 'Earl Ryan Y. Santiago' }, { id: '7175JP', name: 'Jumbo S. Paanod Jr.' },
-            { id: '7084LQ', name: 'Lowel K. Quilinguen' }, { id: '7044AM', name: 'Anna Mae Mencho A. Macaraya' },
-            { id: '4488MD', name: 'Maricris de Gracia' }, { id: '7096AV', name: 'Ale-June Villacencio' },
-            { id: '4489EA', name: 'Everly Apurado' }, { id: '7103RE', name: 'Roberto Ebarita Jr.' },
-            { id: '7043RP', name: 'Randolf Potot' }, { id: '7093MG', name: 'Michael Allien Getigan' },
-            { id: '7166CR', name: 'Carl Anthony Riñen' }, { id: '7090JA', name: 'John Russian Arches' },
-            { id: '7165GR', name: 'Ghee Ram N. Racaza' }, { id: '7176CC', name: 'Clarfen D. Campilanan' },
-            { id: '7249SS', name: 'Serg Sembrano' }, { id: '7236LE', name: 'Lorens Christopher Ebrado' },
-            { id: '4426KV', name: 'Kenneth Lester Villajos' }, { id: '4472JS', name: 'Sison, John Vincent Estopito' },
-            { id: '4475JT', name: 'Joana May Taboada' }, { id: '7240HH', name: 'Hyacint Hortelano' },
-            { id: '7039NO', name: 'Nazareno Oppus' }, { id: '7231NR', name: 'Negel Roloma' },
-            { id: '7244AA', name: 'Arjohn Abapo' }, { id: '7247JA', name: 'Jayson Aliser' },
-            { id: '7248AA', name: 'Allan Paul Alforque' }, { id: '7251JD', name: 'Jan Dominic Dela Cruz' },
-            { id: '7314VP', name: 'Vince April Pitogo' }, { id: '7042NB', name: 'Nikki Carlos Booc' },
-            { id: '7234CS', name: 'Christian Suico' }, { id: '7313MB', name: 'Mark Kg Barong' },
-            { id: '7036RB', name: 'Rodrigo Basnillo' }, { id: '7239EO', name: 'Eric Jason Omega' },
-            { id: '4477PT', name: 'Pacifico Tejam' }, { id: '7251DJ', name: 'Jan Dominic Dela Cruz' },
-            { id: '7233JP', name: 'Jeobenail li Parame' }, { id: '4135RC', name: 'Cantiveros, Ritche Bayo' },
-            { id: '7315CR', name: 'Christiane Repunte' }, { id: '7243JC', name: 'John Cañete' },
-            { id: '4474HS', name: 'Soroño, Humfrey Dave Viaña' }, { id: '4492CP', name: 'Christian Pontiano' },
-            { id: '4421AT', name: 'Anthony Talledo' }, { id: '7237ML', name: 'Michael Bryan Lambo' },
-            { id: '4481JV', name: 'Jasmin Villocino' }, { id: '7316NT', name: 'Niel Fred Tabar' },
-            { id: '7245SC', name: 'Sergio Cuizon Jr.' }, { id: '4476JR', name: 'Rico, Jefrey Labajo' },
-            { id: '7246AJ', name: 'Arvin Jasmin' }, { id: '7241DM', name: 'Dejie Monterde' },
-            { id: '4435AC', name: 'Allan Codina' }, { id: '7242FV', name: 'Francis Anthony Villarin' },
-            { id: '2274JD', name: 'Jacky Dimla' }
-        ].map(t => ({ ...t, quality: getRandomQuality() }));
-
-        let techs = [];
-        let teams = [
-            { name: "63 - Cherrie", id: "63", shift: "day" },
-            { name: "115 - Barbie", id: "115", shift: "day" },
-            { name: "57 - Noel", id: "57", shift: "day" },
-            { name: "123 - Jeave", id: "123", shift: "night" },
-            { name: "114 - Anderson", id: "114", shift: "night" },
-            { name: "64 - Ella", id: "64", shift: "night" }
+        const INITIAL_TEAMS = [
+            { id: "63", name: "63 - Cherrie", shift: "day" },
+            { id: "115", name: "115 - Barbie", shift: "day" },
+            { id: "57", name: "57 - Noel", shift: "day" },
+            { id: "123", name: "123 - Jeave", shift: "night" },
+            { id: "114", name: "114 - Anderson", shift: "night" },
+            { id: "64", name: "64 - Ella", shift: "night" }
         ];
 
+        const INITIAL_TECHS = [
+            { id: '7092RN', name: 'Romiel Nuevo', defaultTeam: '63', shift: 'day', quality: 90 },
+            { id: '7089RR', name: 'Ravin Louis Relador', defaultTeam: '63', shift: 'day', quality: 85 },
+            { id: '7102JD', name: 'John Kenneth Dueñas', defaultTeam: '63', shift: 'day', quality: 85 },
+            { id: '7170WS', name: 'Warren Salogaol', defaultTeam: '63', shift: 'day', quality: 80 },
+            { id: '7040JP', name: 'Jose Poro III', defaultTeam: '63', shift: 'day', quality: 85 },
+            { id: '7159MC', name: 'Ma. Angelica Cagigas', defaultTeam: '63', shift: 'day', quality: 80 },
+            { id: '7161KA', name: 'Kent C. Agraviador', defaultTeam: '63', shift: 'day', quality: 80 },
+            { id: '7168JS', name: 'Jennifer S. Solayao', defaultTeam: '63', shift: 'day', quality: 80 },
+            { id: '7158JD', name: 'Junie S. Dadol', defaultTeam: '63', shift: 'day', quality: 80 },
+            { id: '7167AD', name: 'Almer B. Dela Cruz', defaultTeam: '63', shift: 'day', quality: 80 },
+            { id: '7178MD', name: 'Mary Mae Dagwayan', defaultTeam: '63', shift: 'day', quality: 80 },
+            { id: '4297RQ', name: 'Ralph B. Quinto', defaultTeam: '115', shift: 'day', quality: 90 },
+            { id: '7086LP', name: 'Lemuel Presbitero', defaultTeam: '115', shift: 'day', quality: 85 },
+            { id: '7087LA', name: 'Lorie Mae Año', defaultTeam: '115', shift: 'day', quality: 85 },
+            { id: '7088MA', name: 'Michelle Marie D. Alburo', defaultTeam: '115', shift: 'day', quality: 85 },
+            { id: '7099SS', name: 'Sallemie Solon', defaultTeam: '115', shift: 'day', quality: 80 },
+            { id: '7171AL', name: 'Alfe Marie G. Latras', defaultTeam: '115', shift: 'day', quality: 80 },
+            { id: '7311JT', name: 'Joseph M. Tabada', defaultTeam: '115', shift: 'day', quality: 80 },
+            { id: '7173ES', name: 'Earl Ryan Y. Santiago', defaultTeam: '115', shift: 'day', quality: 80 },
+            { id: '7175JP', name: 'Jumbo S. Paanod Jr.', defaultTeam: '115', shift: 'day', quality: 80 },
+            { id: '7084LQ', name: 'Lowel K. Quilinguen', defaultTeam: '115', shift: 'day', quality: 85 },
+            { id: '7044AM', name: 'Anna Mae Mencho A. Macaraya', defaultTeam: '115', shift: 'day', quality: 85 },
+            { id: '4488MD', name: 'Maricris de Gracia', defaultTeam: '57', shift: 'day', quality: 90 },
+            { id: '7096AV', name: 'Ale-June Villacencio', defaultTeam: '57', shift: 'day', quality: 85 },
+            { id: '4489EA', name: 'Everly Apurado', defaultTeam: '57', shift: 'day', quality: 85 },
+            { id: '7103RE', name: 'Roberto Ebarita Jr.', defaultTeam: '57', shift: 'day', quality: 80 },
+            { id: '7043RP', name: 'Randolf Potot', defaultTeam: '57', shift: 'day', quality: 85 },
+            { id: '7093MG', name: 'Michael Allien Getigan', defaultTeam: '57', shift: 'day', quality: 80 },
+            { id: '7166CR', name: 'Carl Anthony Riñen', defaultTeam: '57', shift: 'day', quality: 80 },
+            { id: '7090JA', name: 'John Russian Arches', defaultTeam: '57', shift: 'day', quality: 80 },
+            { id: '7165GR', name: 'Ghee Ram N. Racaza', defaultTeam: '57', shift: 'day', quality: 80 },
+            { id: '7176CC', name: 'Clarfen D. Campilanan', defaultTeam: '57', shift: 'day', quality: 80 },
+            { id: '7249SS', name: 'Serg Sembrano', defaultTeam: '123', shift: 'night', quality: 90 },
+            { id: '7236LE', name: 'Lorens Christopher Ebrado', defaultTeam: '123', shift: 'night', quality: 95 },
+            { id: '4426KV', name: 'Kenneth Lester Villajos', defaultTeam: '123', shift: 'night', quality: 85 },
+            { id: '4472JS', name: 'Sison, John Vincent Estopito', defaultTeam: '123', shift: 'night', quality: 85 },
+            { id: '4475JT', name: 'Joana May Taboada', defaultTeam: '123', shift: 'night', quality: 80 },
+            { id: '7240HH', name: 'Hyacint Hortelano', defaultTeam: '123', shift: 'night', quality: 80 },
+            { id: '7039NO', name: 'Nazareno Oppus', defaultTeam: '123', shift: 'night', quality: 85 },
+            { id: '7231NR', name: 'Negel Roloma', defaultTeam: '123', shift: 'night', quality: 80 },
+            { id: '7244AA', name: 'Arjohn Abapo', defaultTeam: '123', shift: 'night', quality: 80 },
+            { id: '7247JA', name: 'Jayson Aliser', defaultTeam: '123', shift: 'night', quality: 80 },
+            { id: '7248AA', name: 'Allan Paul Alforque', defaultTeam: '123', shift: 'night', quality: 80 },
+            { id: '7251JD', name: 'Jan Dominic Dela Cruz', defaultTeam: '123', shift: 'night', quality: 80 },
+            { id: '7314VP', name: 'Vince April Pitogo', defaultTeam: '123', shift: 'night', quality: 80 },
+            { id: '7042NB', name: 'Nikki Carlos Booc', defaultTeam: '114', shift: 'night', quality: 90 },
+            { id: '7234CS', name: 'Christian Suico', defaultTeam: '114', shift: 'night', quality: 85 },
+            { id: '7313MB', name: 'Mark Kg Barong', defaultTeam: '114', shift: 'night', quality: 85 },
+            { id: '7036RB', name: 'Rodrigo Basnillo', defaultTeam: '114', shift: 'night', quality: 85 },
+            { id: '4478JV', name: 'Jervin Villocino', defaultTeam: '114', shift: 'night', quality: 80 },
+            { id: '7239EO', name: 'Eric Jason Omega', defaultTeam: '114', shift: 'night', quality: 80 },
+            { id: '4477PT', name: 'Pacifico Tejam', defaultTeam: '114', shift: 'night', quality: 80 },
+            { id: '7251DJ', name: 'Jan Dominic Dela Cruz (A)', defaultTeam: '114', shift: 'night', quality: 80 },
+            { id: '7233JP', name: 'Jeobenail li Parame', defaultTeam: '114', shift: 'night', quality: 80 },
+            { id: '4135RC', name: 'Cantiveros, Ritche Bayo', defaultTeam: '114', shift: 'night', quality: 80 },
+            { id: '7315CR', name: 'Christiane Repunte', defaultTeam: '114', shift: 'night', quality: 80 },
+            { id: '7243JC', name: 'John Cañete', defaultTeam: '114', shift: 'night', quality: 85 },
+            { id: '4474HS', name: 'Soroño, Humfrey Dave Viaña', defaultTeam: '64', shift: 'night', quality: 90 },
+            { id: '4492CP', name: 'Christian Pontiano', defaultTeam: '64', shift: 'night', quality: 85 },
+            { id: '4421AT', name: 'Anthony Talledo', defaultTeam: '64', shift: 'night', quality: 85 },
+            { id: '7237ML', name: 'Michael Bryan Lambo', defaultTeam: '64', shift: 'night', quality: 85 },
+            { id: '4481JV', name: 'Jasmin Villocino', defaultTeam: '64', shift: 'night', quality: 80 },
+            { id: '7316NT', name: 'Niel Fred Tabar', defaultTeam: '64', shift: 'night', quality: 80 },
+            { id: '7245SC', name: 'Sergio Cuizon Jr.', defaultTeam: '64', shift: 'night', quality: 80 },
+            { id: '4476JR', name: 'Rico, Jefrey Labajo', defaultTeam: '64', shift: 'night', quality: 80 },
+            { id: '7246AJ', name: 'Arvin Jasmin', defaultTeam: '64', shift: 'night', quality: 80 },
+            { id: '7241DM', name: 'Dejie Monterde', defaultTeam: '64', shift: 'night', quality: 80 },
+            { id: '4435AC', name: 'Allan Codina', defaultTeam: '64', shift: 'night', quality: 80 },
+            { id: '7242FV', name: 'Francis Anthony Villarin', defaultTeam: '64', shift: 'night', quality: 80 },
+            { id: '2274JD', name: 'Jacky Dimla', defaultTeam: '64', shift: 'night', quality: 85 }
+        ];
+
+        let techs = [];
+        let teams = [];
         let currentAssignments = {};
-        let shuffleScope = 'all'; 
+        let shuffleScope = 'all';
 
         function init() {
-            const savedTechs = localStorage.getItem('techs_v4');
-            const savedTeams = localStorage.getItem('teams_v4');
-            if(savedTechs) techs = JSON.parse(savedTechs);
-            else techs = [...DEFAULT_TECHS];
-            if(savedTeams) teams = JSON.parse(savedTeams);
+            const savedTechs = localStorage.getItem('tech_roster_v4');
+            const savedTeams = localStorage.getItem('team_roster_v4');
             
-            // Initial distribution
-            distributeInitial();
+            techs = savedTechs ? JSON.parse(savedTechs) : [...INITIAL_TECHS];
+            teams = savedTeams ? JSON.parse(savedTeams) : [...INITIAL_TEAMS];
+            
+            resetToDefault();
             renderGrid();
         }
 
-        // Helper to perform initial fair split
-        function distributeInitial() {
-            const sorted = [...techs].sort((a,b) => b.quality - a.quality);
-            const teamCount = teams.length;
-            
-            teams.forEach(t => currentAssignments[t.name] = []);
-            
-            sorted.forEach((tech, index) => {
-                const teamIndex = index % teamCount;
-                currentAssignments[teams[teamIndex].name].push(tech);
+        function saveData() {
+            localStorage.setItem('tech_roster_v4', JSON.stringify(techs));
+            localStorage.setItem('team_roster_v4', JSON.stringify(teams));
+        }
+
+        function resetToDefault() {
+            currentAssignments = {};
+            teams.forEach(t => currentAssignments[t.id] = []);
+            techs.forEach(tech => {
+                if(currentAssignments[tech.defaultTeam]) {
+                    currentAssignments[tech.defaultTeam].push(tech);
+                }
             });
         }
 
@@ -279,265 +359,286 @@
             shuffleScope = scope;
             ['all', 'day', 'night'].forEach(s => {
                 const btn = document.getElementById(`scope-${s}`);
-                if(s === scope) {
-                    btn.classList.add('bg-white', 'shadow-sm', 'text-gray-900');
-                    btn.classList.remove('text-gray-500');
-                } else {
-                    btn.classList.remove('bg-white', 'shadow-sm', 'text-gray-900');
-                    btn.classList.add('text-gray-500');
-                }
+                btn.className = s === scope ? 
+                    "px-3 py-1.5 rounded-md text-sm font-medium bg-white shadow-sm text-gray-900" : 
+                    "px-3 py-1.5 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 transition-all";
             });
         }
 
         function shuffleBalanced() {
-            if (!teams.length || !techs.length) return;
-
-            let activeTeams = [];
-            let poolToShuffle = [];
-
             if (shuffleScope === 'all') {
-                // Shuffle everyone globally
-                activeTeams = [...teams];
-                poolToShuffle = [...techs];
+                performShiftShuffle('day');
+                performShiftShuffle('night');
             } else {
-                // Strict isolation: Only shuffle techs already in the specific shift
-                activeTeams = teams.filter(t => t.shift === shuffleScope);
-                poolToShuffle = activeTeams.flatMap(t => currentAssignments[t.name] || []);
-                
-                // Safety check: if pool is empty (no previous assignment), take global tech pool slice
-                if (poolToShuffle.length === 0) {
-                    poolToShuffle = techs.filter(t => {
-                        const isAssignedElsewhere = teams.some(team => 
-                            team.shift !== shuffleScope && 
-                            (currentAssignments[team.name] || []).some(m => m.id === t.id)
-                        );
-                        return !isAssignedElsewhere;
-                    });
-                }
+                performShiftShuffle(shuffleScope);
             }
+            renderGrid();
+        }
 
-            if (!activeTeams.length || !poolToShuffle.length) return;
+        function performShiftShuffle(shift) {
+            const shiftTeams = teams.filter(t => t.shift === shift);
+            const shiftTechs = techs.filter(t => t.shift === shift).sort((a,b) => (b.quality - a.quality) || (Math.random() - 0.5));
+            
+            if(!shiftTeams.length || !shiftTechs.length) return;
 
-            // 1. Calculate dynamic sizes for active teams based on the specific pool size
-            const total = poolToShuffle.length;
-            const count = activeTeams.length;
-            const base = Math.floor(total / count);
-            const rem = total % count;
-            let sizes = Array(count).fill(base);
-            for(let i=0; i<rem; i++) sizes[i]++;
-            sizes.sort(() => Math.random() - 0.5);
-
-            const caps = {};
-            activeTeams.forEach((t, i) => caps[t.name] = sizes[i]);
-
-            // 2. Clear current assignments for these specific teams
-            activeTeams.forEach(t => {
-                currentAssignments[t.name] = [];
+            const baseSize = Math.floor(shiftTechs.length / shiftTeams.length);
+            const remainder = shiftTechs.length % shiftTeams.length;
+            
+            const teamCaps = {};
+            shiftTeams.forEach((t, i) => {
+                teamCaps[t.id] = baseSize + (i < remainder ? 1 : 0);
+                currentAssignments[t.id] = [];
             });
 
-            // 3. Balanced Greedy Distribution
-            const sortedPool = [...poolToShuffle].sort((a, b) => (b.quality - a.quality) || (Math.random() - 0.5));
-            const teamStats = {};
-            activeTeams.forEach(t => teamStats[t.name] = 0);
+            const teamScores = {};
+            shiftTeams.forEach(t => teamScores[t.id] = 0);
 
-            sortedPool.forEach(tech => {
-                const available = activeTeams.filter(t => currentAssignments[t.name].length < caps[t.name]);
-                if (available.length > 0) {
-                    // Pick the team with the lowest current total quality to maintain balance
-                    let best = available[0].name;
-                    let minQ = Infinity;
+            shiftTechs.forEach(tech => {
+                const available = shiftTeams.filter(t => currentAssignments[t.id].length < teamCaps[t.id]);
+                if(available.length) {
+                    let bestTeam = available[0].id;
+                    let minScore = Infinity;
                     available.forEach(t => {
-                        if (teamStats[t.name] < minQ) {
-                            minQ = teamStats[t.name];
-                            best = t.name;
+                        if(teamScores[t.id] < minScore) {
+                            minScore = teamScores[t.id];
+                            bestTeam = t.id;
                         }
                     });
-                    currentAssignments[best].push(tech);
-                    teamStats[best] += tech.quality;
+                    currentAssignments[bestTeam].push(tech);
+                    teamScores[bestTeam] += tech.quality;
                 }
             });
+        }
 
-            renderGrid();
+        function getShiftMetrics(shift) {
+            const shiftTeams = teams.filter(t => t.shift === shift);
+            const shiftTechs = techs.filter(t => t.shift === shift);
+            if(!shiftTechs.length) return { avg: 0 };
+            
+            const totalQuality = shiftTechs.reduce((acc, curr) => acc + curr.quality, 0);
+            return {
+                avg: totalQuality / shiftTeams.length,
+                total: totalQuality
+            };
         }
 
         function renderGrid() {
             const dayCont = document.getElementById('teams-container-day');
             const nightCont = document.getElementById('teams-container-night');
-            dayCont.innerHTML = '';
-            nightCont.innerHTML = '';
+            dayCont.innerHTML = ''; nightCont.innerHTML = '';
+
+            const dayMetrics = getShiftMetrics('day');
+            const nightMetrics = getShiftMetrics('night');
 
             teams.forEach(team => {
-                const members = currentAssignments[team.name] || [];
-                const totalQuality = members.reduce((sum, m) => sum + m.quality, 0);
-                const avgQuality = members.length ? (totalQuality / members.length).toFixed(1) : 0;
+                const members = currentAssignments[team.id] || [];
+                const teamScore = members.reduce((sum, m) => sum + m.quality, 0);
+                const shiftMetrics = team.shift === 'day' ? dayMetrics : nightMetrics;
+                const perfRatio = shiftMetrics.avg > 0 ? (teamScore / shiftMetrics.avg) * 100 : 100;
                 
                 const card = document.createElement('div');
                 card.className = 'team-card shadow-sm hover:shadow-md transition-shadow';
                 
-                let membersHtml = members.map(m => `
-                    <div class="tech-row">
-                        <div class="px-3 py-1 text-gray-700 truncate font-medium">${m.name}</div>
-                        <div class="quality-cell px-2 py-1 text-blue-600">${m.quality}%</div>
-                        <div class="id-cell px-2 py-1 text-xs text-gray-400 flex items-center justify-center">${m.id}</div>
-                    </div>
-                `).join('');
-
-                const maxDisplay = 14; 
-                const emptyCount = Math.max(0, maxDisplay - members.length);
-                for(let i = 0; i < emptyCount; i++) {
-                    membersHtml += `<div class="tech-row opacity-10"><div class="px-3 py-1 text-transparent">-</div><div class="quality-cell px-2 py-1">-</div><div class="id-cell px-2 py-1">-</div></div>`;
-                }
-
-                card.innerHTML = `
+                let html = `
                     <div class="team-header">
                         <div class="p-2 border-r border-black flex flex-col justify-center">
-                            <span class="text-xs opacity-70 uppercase tracking-tighter">Team</span>
-                            <span class="text-sm truncate">${team.name}</span>
+                            <span class="text-[10px] opacity-70 uppercase tracking-tighter">Team Name</span>
+                            <span class="text-sm truncate leading-tight font-bold">${team.name}</span>
                         </div>
                         <div class="flex flex-col items-center justify-center italic text-[10px]">
-                            <span class="shift-badge ${team.shift === 'day' ? 'shift-day' : 'shift-night'}">${team.shift}</span>
-                            ID: ${team.id}
+                            <span class="shift-badge ${team.shift === 'day' ? 'shift-day' : 'shift-night'} mb-0.5">${team.shift}</span>
+                            T_${team.id}
                         </div>
                     </div>
                     <div class="sub-header">
-                        <div class="px-3 py-1 flex items-center justify-center">Name</div>
-                        <div class="flex items-center justify-center border-l border-white/20">Qual</div>
+                        <div class="px-3 py-1 flex items-center justify-start">Name</div>
                         <div class="flex items-center justify-center border-l border-white/20">ID</div>
                     </div>
-                    <div class="bg-white flex-1">${membersHtml}</div>
-                    <div class="team-footer">
-                        <span>Avg: ${avgQuality}%</span>
-                        <span class="bg-gray-800 text-white px-2 rounded">Size: ${members.length}</span>
-                    </div>
-                `;
+                    <div class="bg-white flex-1">`;
+                
+                members.forEach(m => {
+                    html += `
+                        <div class="tech-row group hover:bg-yellow-50 transition-colors">
+                            <div class="px-3 py-1.5 text-gray-700 truncate font-medium flex items-center justify-between">
+                                ${m.name}
+                                <span class="text-[9px] text-gray-400 opacity-0 group-hover:opacity-100 uppercase font-bold">Q:${m.quality}</span>
+                            </div>
+                            <div class="id-cell px-2 py-1.5 text-[11px] text-gray-500 flex items-center justify-center">${m.id}</div>
+                        </div>`;
+                });
 
+                for(let i=0; i < Math.max(0, 14 - members.length); i++) {
+                    html += `<div class="tech-row opacity-[0.03]"><div class="px-3 py-1.5">-</div><div class="id-cell">-</div></div>`;
+                }
+
+                const ratioColor = perfRatio < 95 ? 'text-red-500' : (perfRatio > 105 ? 'text-green-600' : 'text-gray-800');
+
+                html += `</div>
+                    <div class="team-footer">
+                        <div class="flex justify-between w-full">
+                            <span class="text-gray-400">Members: ${members.length}</span>
+                            <span class="text-gray-300">#${team.id}</span>
+                        </div>
+                        <div class="flex justify-between items-end w-full border-t border-gray-100 pt-1">
+                             <div class="flex flex-col">
+                                <span class="text-[8px] text-gray-400 uppercase">Team Quality</span>
+                                <span class="text-xs font-bold">${teamScore} pts</span>
+                             </div>
+                             <div class="flex flex-col items-end">
+                                <span class="text-[8px] text-gray-400 uppercase">Power Balance</span>
+                                <span class="text-xs font-black ${ratioColor}">${perfRatio.toFixed(1)}%</span>
+                             </div>
+                        </div>
+                    </div>`;
+                card.innerHTML = html;
+                
                 if(team.shift === 'day') dayCont.appendChild(card);
                 else nightCont.appendChild(card);
             });
         }
 
-        function openMemberModal() {
-            document.getElementById('member-modal').classList.remove('hidden');
+        function addNewTech() {
+            const id = document.getElementById('new-tech-id').value.trim();
+            const name = document.getElementById('new-tech-name').value.trim();
+            const quality = parseInt(document.getElementById('new-tech-quality').value);
+            const shift = document.getElementById('new-tech-shift').value;
+
+            if(!id || !name) return;
+            if(techs.some(t => t.id === id)) return;
+
+            techs.push({
+                id, name, quality: quality || 80, shift,
+                defaultTeam: teams.find(t => t.shift === shift)?.id || teams[0]?.id
+            });
+            saveData();
+            renderMemberList();
+            document.getElementById('new-tech-id').value = '';
+            document.getElementById('new-tech-name').value = '';
+        }
+
+        function addNewTeam() {
+            const id = document.getElementById('new-team-id').value.trim();
+            const name = document.getElementById('new-team-name').value.trim();
+            const shift = document.getElementById('new-team-shift').value;
+
+            if(!id || !name) return;
+            if(teams.some(t => t.id === id)) return;
+
+            teams.push({ id, name, shift });
+            currentAssignments[id] = [];
+            saveData();
+            renderTeamEditor();
+            document.getElementById('new-team-id').value = '';
+            document.getElementById('new-team-name').value = '';
+        }
+
+        function removeTech(id) {
+            techs = techs.filter(t => t.id !== id);
+            saveData();
             renderMemberList();
         }
 
-        function openTeamModal() {
-            document.getElementById('team-modal').classList.remove('hidden');
-            renderTeamList();
+        function removeTeam(id) {
+            if(teams.length <= 1) return;
+            teams = teams.filter(t => t.id !== id);
+            saveData();
+            renderTeamEditor();
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+            if(id === 'member-modal') renderMemberList();
+            if(id === 'team-modal') renderTeamEditor();
         }
 
         function closeModals() {
-            document.querySelectorAll('.fixed').forEach(m => m.classList.add('hidden'));
+            document.querySelectorAll('.modal-container').forEach(m => m.classList.add('hidden'));
+            saveData();
+            renderGrid();
         }
-
+        
         function renderMemberList() {
             const list = document.getElementById('member-list');
-            document.getElementById('tech-count-display').innerText = `Total: ${techs.length} Technicians`;
-            const displayList = [...techs].sort((a, b) => a.name.localeCompare(b.name));
-            list.innerHTML = displayList.map((m, i) => `
-                <div class="flex items-center justify-between bg-gray-50 p-2 rounded border group">
-                    <div class="flex items-center gap-4 flex-1">
-                        <span class="w-6 text-[10px] text-gray-400 font-mono">#${i+1}</span>
-                        <div class="flex flex-col">
-                            <span class="text-gray-800 font-semibold">${m.name}</span>
-                            <span class="text-[10px] text-gray-400 font-mono">${m.id}</span>
+            list.innerHTML = [...techs].sort((a,b) => a.name.localeCompare(b.name)).map((m) => `
+                <div class="flex items-center justify-between bg-white p-3 rounded-xl border hover:border-blue-400 transition-colors shadow-sm relative group">
+                    <div class="flex flex-col min-w-0 pr-8">
+                        <span class="font-bold text-sm truncate">${m.name}</span>
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="text-[9px] font-bold text-gray-500 uppercase">${m.id}</span>
+                            <select onchange="updateTechShift('${m.id}', this.value)" class="text-[9px] border rounded bg-gray-100 p-0.5 font-bold cursor-pointer">
+                                <option value="day" ${m.shift === 'day' ? 'selected' : ''}>Day</option>
+                                <option value="night" ${m.shift === 'night' ? 'selected' : ''}>Night</option>
+                            </select>
                         </div>
                     </div>
-                    <div class="flex items-center gap-4">
-                        <div class="flex items-center gap-1">
-                            <input type="number" value="${m.quality}" 
-                                onchange="updateQuality('${m.id}', this.value)"
-                                class="w-12 text-right border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none bg-transparent font-bold text-blue-600">
-                            <span class="text-xs text-gray-400">%</span>
+                    <div class="flex items-center gap-2">
+                        <div class="flex flex-col items-end">
+                             <label class="text-[8px] font-bold text-gray-400">QUALITY</label>
+                             <input type="number" 
+                               value="${m.quality}" 
+                               onchange="updateTechQuality('${m.id}', this.value)"
+                               class="w-12 border rounded bg-gray-50 text-center text-xs font-bold p-1">
                         </div>
-                        <button onclick="removeMember('${m.id}')" class="text-gray-300 hover:text-red-500 transition-colors p-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                        <button onclick="removeTech('${m.id}')" class="text-gray-300 hover:text-red-500 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256"><path d="M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm96,168H64V64H192ZM112,104v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm48,0v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Z"></path></svg>
                         </button>
                     </div>
                 </div>
             `).join('');
         }
 
-        function updateQuality(id, val) {
-            const num = parseInt(val);
-            if(isNaN(num)) return;
-            const tech = techs.find(t => t.id === id);
-            if(tech) {
-                tech.quality = Math.min(100, Math.max(0, num));
-                saveData();
-            }
-        }
-
-        function addMember() {
-            const name = document.getElementById('new-name').value.trim();
-            const id = document.getElementById('new-id').value.trim();
-            let quality = parseInt(document.getElementById('new-quality').value);
-            if(!name || !id) return;
-            if(isNaN(quality)) quality = getRandomQuality();
-            techs.push({ name, id, quality: Math.min(100, Math.max(0, quality)) });
-            saveData();
-            document.getElementById('new-name').value = '';
-            document.getElementById('new-id').value = '';
-            document.getElementById('new-quality').value = '';
-            renderMemberList();
-        }
-
-        function removeMember(id) {
-            techs = techs.filter(t => t.id !== id);
-            saveData();
-            renderMemberList();
-        }
-
-        function resetToDefault() {
-            if(confirm("Reset to default?")) {
-                techs = [...DEFAULT_TECHS].map(t => ({...t, quality: getRandomQuality()}));
-                distributeInitial();
-                saveData();
-                renderMemberList();
-                renderGrid();
-            }
-        }
-
-        function renderTeamList() {
-            const list = document.getElementById('team-list');
-            list.innerHTML = teams.map((t, i) => `
-                <div class="flex items-center justify-between bg-gray-50 p-2 rounded border">
-                    <div>
-                        <span class="shift-badge ${t.shift === 'day' ? 'shift-day' : 'shift-night'} text-[9px] mr-2">${t.shift}</span>
-                        <span class="font-bold text-gray-700">${t.name}</span>
+        function renderTeamEditor() {
+            const list = document.getElementById('team-editor-list');
+            list.innerHTML = teams.map(t => `
+                <div class="flex flex-wrap items-center gap-4 bg-white p-4 rounded-xl border mb-3 group">
+                    <div class="flex-1 min-w-[200px]">
+                        <label class="text-[9px] font-bold text-gray-400 block mb-1 uppercase">Team Name</label>
+                        <input type="text" value="${t.name}" onchange="updateTeamName('${t.id}', this.value)" class="w-full border rounded p-2 text-sm font-medium">
                     </div>
-                    <button onclick="removeTeam(${i})" class="text-gray-300 hover:text-red-500 transition-colors p-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                    </button>
+                    <div>
+                        <label class="text-[9px] font-bold text-gray-400 block mb-1 uppercase">Shift</label>
+                        <select onchange="updateTeamShift('${t.id}', this.value)" class="border rounded p-2 text-sm bg-gray-50">
+                            <option value="day" ${t.shift === 'day' ? 'selected' : ''}>Day</option>
+                            <option value="night" ${t.shift === 'night' ? 'selected' : ''}>Night</option>
+                        </select>
+                    </div>
+                    <div class="pt-5">
+                         <button onclick="removeTeam('${t.id}')" class="p-2 text-gray-200 hover:text-red-500 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256"><path d="M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm96,168H64V64H192ZM112,104v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm48,0v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Z"></path></svg>
+                        </button>
+                    </div>
                 </div>
             `).join('');
         }
 
-        function addTeam() {
-            const name = document.getElementById('team-name').value.trim();
-            const shift = document.getElementById('team-shift').value;
-            if(!name) return;
-            const id = name.includes('-') ? name.split('-')[0].trim() : name.substring(0,3);
-            teams.push({ name, id, shift });
-            if(!currentAssignments[name]) currentAssignments[name] = [];
+        function updateTechQuality(id, val) {
+            const tech = techs.find(t => t.id === id);
+            if(tech) tech.quality = parseInt(val) || 80;
             saveData();
-            document.getElementById('team-name').value = '';
-            renderTeamList();
-            renderGrid();
         }
 
-        function removeTeam(index) {
-            const team = teams[index];
-            delete currentAssignments[team.name];
-            teams.splice(index, 1);
+        function updateTechShift(id, val) {
+            const tech = techs.find(t => t.id === id);
+            if(tech) tech.shift = val;
             saveData();
-            renderTeamList();
-            renderGrid();
         }
 
-        function saveData() {
-            localStorage.setItem('techs_v4', JSON.stringify(techs));
-            localStorage.setItem('teams_v4', JSON.stringify(teams));
+        function updateTeamName(id, val) {
+            const team = teams.find(t => t.id === id);
+            if(team) team.name = val;
+            saveData();
+        }
+
+        function updateTeamShift(id, val) {
+            const team = teams.find(t => t.id === id);
+            if(team) team.shift = val;
+            saveData();
+        }
+
+        function confirmFullReset() { document.getElementById('confirm-modal').classList.remove('hidden'); }
+        function executeFullReset() { 
+            localStorage.clear(); 
+            location.reload(); 
         }
 
         window.onload = init;
